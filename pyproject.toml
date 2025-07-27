@@ -4,9 +4,9 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "gomoku-ai"
-version = "2.0.0"
+version = "0.1.0"
 authors = [
-    {name = "Gomoku AI Team", email = "n/a"},
+    {name = "Gomoku AI Team", email = "maksim.tkatchenko@gmail.com"},
 ]
 description = "A modular Gomoku (Five in a Row) game implementation with AI agents"
 readme = "README.md"

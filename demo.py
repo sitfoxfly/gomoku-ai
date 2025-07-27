@@ -24,8 +24,8 @@ async def main():
 
     # Create agents with dependency injection
     agents = [
-        LLMGomokuAgent("Qwen-OpenAI"),
-        HfGomokuAgent("Qwen-HF"),
+        LLMGomokuAgent("APIAgent"),
+        HfGomokuAgent("LocalAgent"),
     ]
 
     # Demo: Single game with verbose output

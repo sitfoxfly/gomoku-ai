@@ -4,7 +4,6 @@ import json
 import re
 from typing import Tuple
 from ..core.models import GameState
-from ..core.prompt_formatters import StandardGridFormatter, PromptFormatter
 from ..llm.openai_client import OpenAIGomokuClient
 from .base import Agent
 
@@ -22,7 +21,6 @@ class LLMGomokuAgent(Agent):
             max_tokens=1024,
         )
 
-        self.formatter: PromptFormatter = StandardGridFormatter()
         self.system_prompt: str = self._get_default_system_prompt()
 
     def _get_default_system_prompt(self) -> str:
@@ -49,7 +47,7 @@ The row and col must be valid coordinates on the board (0-indexed). Always choos
         """Get next move from LLM or fallback to simple strategy."""
         try:
             # Format the board state for the LLM
-            board_str = self.formatter.format_board(game_state)
+            board_str = game_state.format_board(formatter="standard")
             board_prompt = f"Current board state:\n{board_str}\n"
             board_prompt += f"Current player: {game_state.current_player.value}\n"
             board_prompt += f"Move count: {len(game_state.move_history)}\n"

@@ -4,7 +4,6 @@ import json
 import re
 from typing import Tuple
 from ..core.models import GameState
-from ..core.prompt_formatters import StandardGridFormatter, PromptFormatter
 from ..llm.huggingface_client import HuggingFaceClient
 from .base import Agent
 
@@ -18,7 +17,7 @@ class HfGomokuAgent(Agent):
         self.llm_client = HuggingFaceClient(
             model="microsoft/Phi-3.5-mini-instruct",
             temperature=0.7,
-            max_new_tokens=512,
+            max_new_tokens=256,
         )
 
         self.system_prompt: str = self._get_default_system_prompt()
