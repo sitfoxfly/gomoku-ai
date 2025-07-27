@@ -78,12 +78,6 @@ setup(
             'matplotlib>=3.5',
         ]
     },
-    entry_points={
-        'console_scripts': [
-            'gomoku-demo=gomoku.cli:main_demo',
-            'gomoku-tournament=gomoku.cli:tournament_cli',
-        ],
-    },
     keywords=[
         'gomoku', 'five-in-a-row', 'board-game', 'ai', 'machine-learning',
         'llm', 'openai', 'huggingface', 'transformers', 'strategy', 'tournament', 'game-ai'

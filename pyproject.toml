@@ -64,9 +64,6 @@ Homepage = "https://github.com/your-username/gomoku-ai"
 "Source" = "https://github.com/your-username/gomoku-ai"
 "Documentation" = "https://gomoku-ai.readthedocs.io/"
 
-[project.scripts]
-gomoku-demo = "gomoku.cli:main_demo"
-gomoku-tournament = "gomoku.cli:tournament_cli"
 
 [tool.setuptools.packages.find]
 where = ["."]

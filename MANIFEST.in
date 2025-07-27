@@ -11,7 +11,7 @@ recursive-include gomoku *.md
 recursive-include gomoku *.txt
 
 # Include examples
-include main.py
+include demo.py
 
 # Exclude development files
 exclude *.pyc
