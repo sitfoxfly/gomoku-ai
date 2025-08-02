@@ -63,23 +63,23 @@ python -m gomoku play gomoku.agents.simple_agent.SimpleGomokuAgent gomoku.agents
 ### Advanced CLI Usage
 
 ```bash
-# Discover agents from local directories
-python -m gomoku --discover-agents ./my_agents
+# Discover agents from local directories and list them
+python -m gomoku --discover-agents ./my_agents list --detailed
 
 # Discover agents from GitHub repositories
-python -m gomoku --github-repos https://github.com/user/gomoku-agent
+python -m gomoku --github-repos https://github.com/user/gomoku-agent list
 
-# List all discovered agents
-python -m gomoku list --detailed
+# Validate all discovered agents
+python -m gomoku --discover-agents ./my_agents validate
 
-# Validate discovered agents
-python -m gomoku validate
+# Validate specific agent
+python -m gomoku --discover-agents ./my_agents validate --agent my_agents.agent_name.AgentClass
 
 # Play a game with verbose output and logging
-python -m gomoku play agent1 agent2 --verbose --log game.json
+python -m gomoku --discover-agents ./my_agents play my_agents.agent1.Agent1 gomoku.agents.simple_agent.SimpleGomokuAgent --verbose --log game.json
 
 # Generate interactive HTML visualization
-python -m gomoku play agent1 agent2 --log game.json --html
+python -m gomoku --discover-agents ./my_agents play agent1.AgentClass agent2.AgentClass --log game.json --html
 # Or convert existing JSON logs
 python -m gomoku.utils json_to_html game.json -o game.html
 ```
@@ -116,20 +116,17 @@ class MyGomokuAgent(Agent):
 
 3. **Discover and test:**
 ```bash
-# Discover agents from local directory
-python -m gomoku --discover-agents ./my_agent_folder
+# Discover agents from local directory and list them
+python -m gomoku --discover-agents ./my_agent_folder list --detailed
 
-# Discover from GitHub repositories
-python -m gomoku --github-repos https://github.com/username/my-agent
+# Validate your agent (after discovery)
+python -m gomoku --discover-agents ./my_agent_folder validate --agent my_agent.MyGomokuAgent
 
-# List all discovered agents
-python -m gomoku list --detailed
+# Play against built-in agents (after discovery)
+python -m gomoku --discover-agents ./my_agent_folder play my_agent.MyGomokuAgent gomoku.agents.simple_agent.SimpleGomokuAgent --verbose
 
-# Validate your agent
-python -m gomoku validate --agent MyCustomAgent
-
-# Play against built-in agents
-python -m gomoku play MyCustomAgent gomoku.agents.simple_agent.SimpleGomokuAgent --verbose
+# Or discover from GitHub repositories
+python -m gomoku --github-repos https://github.com/username/my-agent list --detailed
 ```
 
 ### 1. Simple Rule-Based Agent
