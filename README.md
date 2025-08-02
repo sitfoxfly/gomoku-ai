@@ -478,15 +478,6 @@ python -m gomoku validate
 
 ## 📚 Learning Resources
 
-### Tutorial Notebook
-
-Start with `create_llm_agent_tutorial.ipynb` - a comprehensive Jupyter notebook that teaches:
-- Step-by-step agent development
-- Understanding the framework architecture  
-- Strategic reasoning implementation
-- Running competitions
-- Integration with the CLI system
-
 ### Understanding the Codebase
 
 - **`gomoku/core/`** - Game rules, models, and logic
