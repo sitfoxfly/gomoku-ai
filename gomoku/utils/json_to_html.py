@@ -111,15 +111,17 @@ class JSONToHTMLConverter:
         body {{
             font-family: Arial, sans-serif;
             margin: 20px;
-            background-color: #f5f5f5;
+            background-color: #f5f5f5 !important;
+            color: #212529 !important;
         }}
         .container {{
             max-width: 1200px;
             margin: 0 auto;
-            background: white;
+            background: white !important;
             padding: 20px;
             border-radius: 10px;
             box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            color: #212529 !important;
         }}
         .header {{
             text-align: center;
@@ -159,8 +161,8 @@ class JSONToHTMLConverter:
             border: 3px solid #8b4513;
         }}
         .gomoku-board th {{
-            background: #8b4513;
-            color: white;
+            background: #8b4513 !important;
+            color: white !important;
             padding: 5px 8px;
             font-weight: bold;
             text-align: center;
@@ -178,12 +180,12 @@ class JSONToHTMLConverter:
             box-sizing: border-box;
         }}
         .cell.black {{
-            background: #333;
-            color: white;
+            background: #333 !important;
+            color: white !important;
         }}
         .cell.white {{
-            background: #fff;
-            color: black;
+            background: #fff !important;
+            color: black !important;
         }}
         .cell.winning {{
             background: #f44336 !important;
@@ -202,8 +204,8 @@ class JSONToHTMLConverter:
             text-align: center;
         }}
         .controls button {{
-            background: #007bff;
-            color: white;
+            background: #007bff !important;
+            color: white !important;
             border: none;
             padding: 10px 20px;
             margin: 5px;
@@ -212,10 +214,11 @@ class JSONToHTMLConverter:
             font-size: 14px;
         }}
         .controls button:hover {{
-            background: #0056b3;
+            background: #0056b3 !important;
         }}
         .controls button:disabled {{
-            background: #ccc;
+            background: #ccc !important;
+            color: #666 !important;
             cursor: not-allowed;
         }}
         .move-info {{
@@ -241,39 +244,39 @@ class JSONToHTMLConverter:
             background: #f0f0f0;
         }}
         .move-item.current {{
-            background: #007bff;
-            color: white;
+            background: #007bff !important;
+            color: white !important;
         }}
         .move-item.illegal {{
-            background: #f8d7da;
+            background: #f8d7da !important;
             border-left: 4px solid #dc3545;
-            color: #721c24;
+            color: #721c24 !important;
         }}
         .move-item.illegal:hover {{
-            background: #f1b0b7;
+            background: #f1b0b7 !important;
         }}
         .move-item.illegal.current {{
-            background: #dc3545;
-            color: white;
+            background: #dc3545 !important;
+            color: white !important;
         }}
         .move-item.current .llm-conversation {{
-            background: #f8f9fa;
-            color: #212529;
+            background: #f8f9fa !important;
+            color: #212529 !important;
         }}
         .move-item.current .llm-input {{
-            background: #e3f2fd;
-            color: #212529;
+            background: #e3f2fd !important;
+            color: #212529 !important;
         }}
         .move-item.current .llm-output {{
-            background: #f3e5f5;
-            color: #212529;
+            background: #f3e5f5 !important;
+            color: #212529 !important;
         }}
         .move-item.current .llm-role {{
-            color: #495057;
+            color: #495057 !important;
         }}
         .result-banner {{
-            background: #28a745;
-            color: white;
+            background: #28a745 !important;
+            color: white !important;
             padding: 15px;
             text-align: center;
             border-radius: 8px;
@@ -282,7 +285,7 @@ class JSONToHTMLConverter:
             font-weight: bold;
         }}
         .llm-conversation {{
-            background: #f8f9fa;
+            background: #f8f9fa !important;
             border: 1px solid #dee2e6;
             border-radius: 8px;
             margin-top: 10px;
@@ -291,23 +294,26 @@ class JSONToHTMLConverter:
             font-size: 12px;
             max-height: 300px;
             overflow-y: auto;
+            color: #212529 !important;
         }}
         .llm-input {{
-            background: #e3f2fd;
+            background: #e3f2fd !important;
             padding: 10px;
             border-radius: 5px;
             margin-bottom: 10px;
             border-left: 4px solid #2196f3;
+            color: #212529 !important;
         }}
         .llm-output {{
-            background: #f3e5f5;
+            background: #f3e5f5 !important;
             padding: 10px;
             border-radius: 5px;
             border-left: 4px solid #9c27b0;
+            color: #212529 !important;
         }}
         .llm-role {{
             font-weight: bold;
-            color: #495057;
+            color: #495057 !important;
             margin-bottom: 5px;
         }}
         .llm-content {{
