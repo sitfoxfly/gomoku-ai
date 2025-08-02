@@ -1,3 +1,23 @@
-from .visualization import ColorBoardFormatter, SimpleBoardFormatter
+from .visualization import (
+    BoardFormatter,
+    ColorBoardFormatter, 
+    SimpleBoardFormatter,
+    StandardGridFormatter,
+    CompactFormatter,
+    NaturalLanguageFormatter,
+    JSONFormatter,
+    StrategicFormatter,
+    create_formatter
+)
 
-__all__ = ['ColorBoardFormatter', 'SimpleBoardFormatter']
+__all__ = [
+    'BoardFormatter',
+    'ColorBoardFormatter', 
+    'SimpleBoardFormatter',
+    'StandardGridFormatter',
+    'CompactFormatter',
+    'NaturalLanguageFormatter',
+    'JSONFormatter',
+    'StrategicFormatter',
+    'create_formatter'
+]

@@ -15,8 +15,8 @@ class LLMGomokuAgent(Agent):
         """Internal setup method - configures LLM client and formatter."""
 
         self.llm_client = OpenAIGomokuClient(
-            model="Qwen/Qwen2-7B-Instruct",
-            endpoint="https://api.featherless.ai/v1",
+            model="mistralai/Mistral-7B-Instruct-v0.3",
+            endpoint="https://api.together.xyz/v1",
             temperature=0.7,
             max_tokens=1024,
         )

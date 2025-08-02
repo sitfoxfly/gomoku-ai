@@ -47,14 +47,90 @@ async def main():
 asyncio.run(main())
 ```
 
-### Run the Demo
+### CLI Quick Start
 
 ```bash
-# Run the demo script
-python demo.py
+# Use the CLI interface
+python -m gomoku --help
+
+# List available built-in agents
+python -m gomoku list
+
+# Play a game between two built-in agents
+python -m gomoku play builtin.SimpleGomokuAgent builtin.LLMGomokuAgent
+```
+
+### Advanced CLI Usage
+
+```bash
+# Discover agents from local directories
+python -m gomoku --discover-agents ./my_agents
+
+# Discover agents from GitHub repositories
+python -m gomoku --github-repos https://github.com/user/gomoku-agent
+
+# List all discovered agents
+python -m gomoku list --detailed
+
+# Validate discovered agents
+python -m gomoku validate
+
+# Play a game with verbose output and logging
+python -m gomoku play agent1 agent2 --verbose --log game.json
+
+# Generate interactive HTML visualization
+python -m gomoku play agent1 agent2 --log game.json --html
+# Or convert existing JSON logs
+python -m gomoku.utils json_to_html game.json -o game.html
 ```
 
 ## 🤖 Building Your Own Agent
+
+### Agent Discovery System
+
+Create external agents that the framework can automatically discover:
+
+1. **Create an agent.json manifest:**
+```json
+{
+    "name": "MyCustomAgent",
+    "agent_class": "my_agent.MyGomokuAgent", 
+    "author": "Your Name",
+    "description": "A strategic Gomoku agent",
+    "version": "1.0.0"
+}
+```
+
+2. **Create your agent class:**
+```python
+# my_agent.py
+from gomoku.agents.base import Agent
+from gomoku.core.models import GameState
+from typing import Tuple
+
+class MyGomokuAgent(Agent):
+    async def get_move(self, game_state: GameState) -> Tuple[int, int]:
+        # Your strategy here
+        return (row, col)
+```
+
+3. **Discover and test:**
+```bash
+# Discover agents from local directory
+python -m gomoku --discover-agents ./my_agent_folder
+
+# Discover from GitHub repositories
+python -m gomoku --github-repos https://github.com/username/my-agent
+
+# List all discovered agents
+python -m gomoku list --detailed
+
+# Validate your agent
+python -m gomoku validate --agent MyCustomAgent
+
+# Play against built-in agents
+python -m gomoku play MyCustomAgent builtin.SimpleGomokuAgent --verbose
+```
 
 ### 1. Simple Rule-Based Agent
 
@@ -160,7 +236,7 @@ class StrategicAgent(Agent):
 Create an agent that uses language models:
 
 ```python
-from gomoku.llm.openai_client import OpenAIGomokuClient
+from gomoku.llm import OpenAIGomokuClient
 
 class MyLLMAgent(Agent):
     """Agent powered by language models."""
@@ -362,15 +438,71 @@ def debug_game_state(state: GameState):
         print(f"Last move: {last_move.player.value} at ({last_move.row}, {last_move.col})")
 ```
 
+## 🎮 Advanced CLI Features
+
+### Agent Discovery from GitHub
+
+```bash
+# Discover agents from GitHub repositories
+python -m gomoku --github-repos https://github.com/user/gomoku-agent
+python -m gomoku --github-repos https://github.com/user/repo1 https://github.com/user/repo2
+
+# Use specific branch
+python -m gomoku --github-repos https://github.com/user/repo --github-branch development
+```
+
+### Game Visualization
+
+Generate interactive HTML logs with move-by-move replay:
+
+```bash
+# Play and log a game with automatic HTML generation
+python -m gomoku play agent1 agent2 --log detailed_game.json --html
+
+# Or convert existing JSON logs to HTML
+python -m gomoku.utils json_to_html detailed_game.json -o game_replay.html
+
+# Open in browser to see:
+# - Step-by-step board states
+# - Move history with timing
+# - LLM conversation logs (if applicable)
+# - Winning sequence highlights
+```
+
+### Batch Operations
+
+```bash
+# Validate specific agent
+python -m gomoku validate --agent MyCustomAgent
+
+# Show only validated agents
+python -m gomoku list --validated-only
+
+# Validate all discovered agents
+python -m gomoku validate
+```
+
 ## 📚 Learning Resources
+
+### Tutorial Notebook
+
+Start with `create_llm_agent_tutorial.ipynb` - a comprehensive Jupyter notebook that teaches:
+- Step-by-step agent development
+- Understanding the framework architecture  
+- Strategic reasoning implementation
+- Running competitions
+- Integration with the CLI system
 
 ### Understanding the Codebase
 
 - **`gomoku/core/`** - Game rules, models, and logic
-- **`gomoku/agents/`** - Agent implementations and base classes  
+- **`gomoku/agents/`** - Agent implementations and base classes
+- **`gomoku/discovery/`** - Dynamic agent discovery and loading system
 - **`gomoku/arena/`** - Game orchestration and tournaments
-- **`gomoku/llm/`** - Language model integrations
-- **`gomoku/utils/`** - Utilities like board formatters
+- **`gomoku/llm/`** - Language model integrations (OpenAI, HuggingFace)
+- **`gomoku/utils/`** - Utilities like board formatters and visualization
+  - `json_to_html.py` - Interactive game visualization
+- **`gomoku/cli.py`** - Command-line interface
 
 ### Game Strategy Tips
 

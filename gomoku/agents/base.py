@@ -2,17 +2,17 @@
 
 from abc import ABC, abstractmethod
 from typing import Tuple
-from ..core.models import GameState
+from ..core.models import GameState, Player
 
 
 class Agent(ABC):
     """Abstract base class for all Gomoku agents."""
-    
+
     def __init__(self, agent_id: str):
-        self.agent_id = agent_id
-        self.player = None  # Will be set when game starts
+        self.agent_id: str = agent_id
+        self.player: Player = None  # Will be set when game starts
         self._setup()  # Each agent handles its own setup
-    
+
     def _setup(self):
         """Internal setup method - override in subclasses if needed."""
         pass

@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "gomoku-ai"
-version = "0.1.0"
+version = "0.1.1"
 authors = [
     {name = "Gomoku AI Team", email = "maksim.tkatchenko@gmail.com"},
 ]
@@ -33,6 +33,8 @@ keywords = [
 ]
 dependencies = [
     "openai>=1.0.0",
+    "tenacity>=8.0.0",
+    "GitPython>=3.1.0",
 ]
 
 [project.optional-dependencies]
@@ -59,11 +61,7 @@ examples = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/your-username/gomoku-ai"
-"Bug Reports" = "https://github.com/your-username/gomoku-ai/issues"
-"Source" = "https://github.com/your-username/gomoku-ai"
-"Documentation" = "https://gomoku-ai.readthedocs.io/"
-
+Homepage = "https://github.com/sitfoxfly/gomoku-ai"
 
 [tool.setuptools.packages.find]
 where = ["."]

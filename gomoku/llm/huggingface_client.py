@@ -333,6 +333,7 @@ class HuggingFacePipelineClient(LLMClient):
             # Extract response
             if results and len(results) > 0:
                 response = results[0]["generated_text"]
+                
                 return response
             else:
                 raise Exception("No response generated from pipeline")

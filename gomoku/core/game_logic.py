@@ -19,7 +19,7 @@ class GomokuGame:
             self.state = board_state
         else:
             self.state = GameState(
-                board=_create_empty_board(),
+                board=_create_empty_board(board_size),
                 current_player=Player.BLACK,
                 move_history=[],
                 board_size=board_size,
@@ -91,7 +91,7 @@ class GomokuGame:
                             c -= dc
 
                         if len(sequence) >= 5:
-                            return sequence[:5]  # Return first 5 in sequence
+                            return sequence  # Return the complete winning sequence
 
         return []
 
