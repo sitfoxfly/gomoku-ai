@@ -57,7 +57,7 @@ python -m gomoku --help
 python -m gomoku list
 
 # Play a game between two built-in agents
-python -m gomoku play builtin.SimpleGomokuAgent builtin.LLMGomokuAgent
+python -m gomoku play gomoku.agents.simple_agent.SimpleGomokuAgent gomoku.agents.openai_llm_agent.LLMGomokuAgent
 ```
 
 ### Advanced CLI Usage
@@ -129,7 +129,7 @@ python -m gomoku list --detailed
 python -m gomoku validate --agent MyCustomAgent
 
 # Play against built-in agents
-python -m gomoku play MyCustomAgent builtin.SimpleGomokuAgent --verbose
+python -m gomoku play MyCustomAgent gomoku.agents.simple_agent.SimpleGomokuAgent --verbose
 ```
 
 ### 1. Simple Rule-Based Agent
