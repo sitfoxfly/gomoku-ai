@@ -128,6 +128,22 @@ class JSONToHTMLConverter:
             margin-bottom: 20px;
             padding-bottom: 20px;
             border-bottom: 2px solid #ddd;
+            color: #212529 !important;
+        }}
+        .header h1, .header h2, .header h3 {{
+            color: #212529 !important;
+        }}
+        h1, h2, h3, h4, h5, h6 {{
+            color: #212529 !important;
+        }}
+        p, span, div, strong, b {{
+            color: #212529 !important;
+        }}
+        * {{
+            color: #212529 !important;
+        }}
+        .container * {{
+            color: #212529 !important;
         }}
         .game-info {{
             display: grid;
@@ -136,10 +152,22 @@ class JSONToHTMLConverter:
             margin-bottom: 20px;
         }}
         .info-card {{
-            background: #f8f9fa;
+            background: #f8f9fa !important;
             padding: 15px;
             border-radius: 8px;
-            border-left: 4px solid #007bff;
+            border: 1px solid #dee2e6;
+            color: #212529 !important;
+        }}
+        .info-card h3 {{
+            color: #212529 !important;
+            margin-top: 0;
+        }}
+        .info-card p {{
+            color: #212529 !important;
+            margin: 5px 0;
+        }}
+        .info-card strong {{
+            color: #212529 !important;
         }}
         .board-container {{
             display: flex;
@@ -233,12 +261,14 @@ class JSONToHTMLConverter:
             border: 1px solid #ddd;
             border-radius: 5px;
             padding: 10px;
-            background: white;
+            background: white !important;
+            color: #212529 !important;
         }}
         .move-item {{
             padding: 5px;
             cursor: pointer;
             border-radius: 3px;
+            color: #212529 !important;
         }}
         .move-item:hover {{
             background: #f0f0f0;
@@ -322,7 +352,7 @@ class JSONToHTMLConverter:
         }}
         .llm-toggle {{
             background: #6c757d;
-            color: white;
+            color: white !important;
             border: none;
             padding: 5px 10px;
             border-radius: 3px;
@@ -332,6 +362,7 @@ class JSONToHTMLConverter:
         }}
         .llm-toggle:hover {{
             background: #5a6268;
+            color: white !important;
         }}
     </style>
 </head>
