@@ -13,10 +13,47 @@ class Player(Enum):
 
 
 class GameResult(Enum):
-    BLACK_WIN = "black_win"
-    WHITE_WIN = "white_win"
-    DRAW = "draw"
-    INVALID_MOVE = "invalid_move"
+    # Normal game endings
+    BLACK_WIN = "black_win"              # Code: BW - Black wins by getting 5 in a row
+    WHITE_WIN = "white_win"              # Code: WW - White wins by getting 5 in a row
+    DRAW = "draw"                        # Code: DR - Game ends in draw (board full)
+    
+    # Illegal move endings
+    INVALID_MOVE = "invalid_move"        # Code: IM - Invalid position (occupied/out of bounds)
+    TIMEOUT = "timeout"                  # Code: TO - Player exceeded time limit
+    
+    # Error endings
+    EXCEPTION = "exception"              # Code: EX - Agent crashed or threw exception
+    RESIGNATION = "resignation"          # Code: RS - Agent resigned (future use)
+    
+    def get_code(self) -> str:
+        """Get standardized 2-letter code for this result."""
+        code_map = {
+            GameResult.BLACK_WIN: "BW",
+            GameResult.WHITE_WIN: "WW", 
+            GameResult.DRAW: "DR",
+            GameResult.INVALID_MOVE: "IM",
+            GameResult.TIMEOUT: "TO",
+            GameResult.EXCEPTION: "EX",
+            GameResult.RESIGNATION: "RS",
+        }
+        return code_map.get(self, "UK")  # UK = Unknown
+    
+    @classmethod
+    def from_code(cls, code: str) -> 'GameResult':
+        """Get GameResult from 2-letter code."""
+        code_map = {
+            "BW": cls.BLACK_WIN,
+            "WW": cls.WHITE_WIN,
+            "DR": cls.DRAW,
+            "IM": cls.INVALID_MOVE,
+            "TO": cls.TIMEOUT,
+            "EX": cls.EXCEPTION,
+            "RS": cls.RESIGNATION,
+        }
+        if code not in code_map:
+            raise ValueError(f"Unknown game result code: {code}")
+        return code_map[code]
 
 
 @dataclass

@@ -7,7 +7,8 @@ A comprehensive educational framework for building and testing Gomoku (Five in a
 - **AI Agent Development**: Create your own intelligent game-playing agents
 - **Game Theory**: Understand strategic gameplay through implementation
 - **Clean Architecture**: See SOLID principles in action with a real project
-- **Tournament Systems**: Run competitions between different AI strategies
+- **Game Analysis**: Comprehensive logging with illegal move tracking and result codes
+- **Interactive Visualization**: Rich HTML replays with move-by-move analysis
 - **LLM Integration**: Use language models for game AI (OpenAI, HuggingFace)
 
 ## 🚀 Quick Start
@@ -328,66 +329,6 @@ async def test_agents():
 asyncio.run(test_agents())
 ```
 
-## 🏆 Running Tournaments
-
-### Round-Robin Tournament
-
-```python
-from gomoku.arena import Tournament
-
-async def run_tournament():
-    # Create tournament
-    arena = GomokuArena(board_size=8)
-    tournament = Tournament(arena)
-    
-    # Create multiple agents to compete
-    agents = [
-        SimpleGomokuAgent("Simple"),
-        MyFirstAgent("Random"),
-        StrategicAgent("Strategic"),
-        # Add more agents here
-    ]
-    
-    # Run round-robin (each agent plays every other agent)
-    results = await tournament.round_robin(agents, games_per_match=4)
-    
-    # Display results
-    print("\\n🏆 TOURNAMENT RESULTS 🏆")
-    print("=" * 50)
-    
-    for rank, (agent_id, stats) in enumerate(results["rankings"], 1):
-        print(f"{rank}. {agent_id:15} - "
-              f"Points: {stats['points']:2d} "
-              f"({stats['wins']}W {stats['losses']}L {stats['draws']}D)")
-
-asyncio.run(run_tournament())
-```
-
-### Custom Tournament Formats
-
-```python
-async def custom_tournament():
-    arena = GomokuArena(board_size=8)
-    tournament = Tournament(arena)
-    
-    # Create bracket-style elimination
-    agents = [SimpleGomokuAgent(f"Bot{i}") for i in range(8)]
-    
-    # Semi-finals
-    semifinal_winners = []
-    for i in range(0, len(agents), 2):
-        match = await tournament.play_match(agents[i], agents[i+1], games=3)
-        winner = max(match["wins"], key=match["wins"].get)
-        semifinal_winners.append(next(a for a in agents if a.agent_id == winner))
-        print(f"Semifinal: {winner} advances!")
-    
-    # Finals
-    final_match = await tournament.play_match(semifinal_winners[0], semifinal_winners[1], games=5)
-    champion = max(final_match["wins"], key=final_match["wins"].get)
-    print(f"\\n🎉 CHAMPION: {champion} 🎉")
-
-asyncio.run(custom_tournament())
-```
 
 ## 🛠️ Development Tools
 
@@ -414,6 +355,35 @@ def test_agent_basic():
     print(f"✅ Agent returned valid move: {move}")
 
 test_agent_basic()
+```
+
+### Agent Performance Analysis
+
+```python
+# Analyze agent performance with detailed logging
+import asyncio
+from gomoku import GomokuArena
+
+async def analyze_agent():
+    arena = GomokuArena(board_size=8)
+    agent = MyCustomAgent("TestAgent")
+    opponent = SimpleGomokuAgent("Baseline")
+    
+    result = await arena.run_game(agent, opponent, verbose=True)
+    
+    print(f"Game Result: {result['result_code']} - {result['reason']}")
+    print(f"Total Moves: {result['moves']}")
+    
+    # Check for illegal moves
+    illegal_moves = [move for move in result['game_log'] if move.get('illegal', False)]
+    if illegal_moves:
+        print(f"⚠️  Found {len(illegal_moves)} illegal moves")
+        for move in illegal_moves:
+            print(f"   Move {move['move_number']}: {move['reason']}")
+    else:
+        print("✅ No illegal moves detected")
+
+asyncio.run(analyze_agent())
 ```
 
 ### Debugging Game States
@@ -448,21 +418,48 @@ python -m gomoku --github-repos https://github.com/user/repo1 https://github.com
 python -m gomoku --github-repos https://github.com/user/repo --github-branch development
 ```
 
-### Game Visualization
+### Game Logging & Result Tracking
 
-Generate interactive HTML logs with move-by-move replay:
+The framework provides comprehensive game logging with standardized result codes:
+
+```bash
+# Play with detailed logging
+python -m gomoku --discover-agents ./agents play agent1 agent2 --verbose --log game.json
+
+# All games include:
+# - Complete move history with timing
+# - Illegal move detection and logging
+# - LLM conversation logs (if applicable)
+# - Standardized result codes (BW, WW, DR, IM, TO, EX)
+```
+
+**Game Result Codes:**
+- **BW** - Black Win (5 in a row)
+- **WW** - White Win (5 in a row)  
+- **DR** - Draw (board full)
+- **IM** - Invalid Move (illegal position)
+- **TO** - Timeout (time limit exceeded)
+- **EX** - Exception (agent error)
+
+> 📋 **See [GAME_RESULT_CODES.md](GAME_RESULT_CODES.md) for complete coding scheme documentation**
+
+### Interactive HTML Visualization
+
+Generate rich HTML logs with move-by-move replay and illegal move tracking:
 
 ```bash
 # Play and log a game with automatic HTML generation
-python -m gomoku play agent1 agent2 --log detailed_game.json --html
+python -m gomoku --discover-agents ./agents play agent1 agent2 --log detailed_game.json --html
 
 # Or convert existing JSON logs to HTML
 python -m gomoku.utils json_to_html detailed_game.json -o game_replay.html
 
-# Open in browser to see:
-# - Step-by-step board states
-# - Move history with timing
-# - LLM conversation logs (if applicable)
+# Features include:
+# - Step-by-step board states with navigation
+# - Move history with timing information
+# - LLM conversation logs (expandable)
+# - Illegal moves highlighted in red with reasons
+# - Clear result display (Draw/Winner/Error)
 # - Winning sequence highlights
 ```
 
@@ -495,7 +492,7 @@ Start with `create_llm_agent_tutorial.ipynb` - a comprehensive Jupyter notebook 
 - **`gomoku/core/`** - Game rules, models, and logic
 - **`gomoku/agents/`** - Agent implementations and base classes
 - **`gomoku/discovery/`** - Dynamic agent discovery and loading system
-- **`gomoku/arena/`** - Game orchestration and tournaments
+- **`gomoku/arena/`** - Game orchestration and match management
 - **`gomoku/llm/`** - Language model integrations (OpenAI, HuggingFace)
 - **`gomoku/utils/`** - Utilities like board formatters and visualization
   - `json_to_html.py` - Interactive game visualization
@@ -521,7 +518,7 @@ Start with `create_llm_agent_tutorial.ipynb` - a comprehensive Jupyter notebook 
 Ready to contribute? Here's how:
 
 1. **Add New Agents**: Implement novel strategies or algorithms
-2. **Improve Tournaments**: Add new tournament formats
+2. **Enhance Game Analysis**: Add game statistics and performance metrics
 3. **LLM Integration**: Support additional language model providers
 4. **Visualization**: Enhance board display and game analysis
 5. **Documentation**: Improve examples and tutorials

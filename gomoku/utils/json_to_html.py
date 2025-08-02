@@ -58,6 +58,22 @@ class JSONToHTMLConverter:
         html += '</table>'
         return html
     
+    def _format_result_banner(self, result: dict) -> str:
+        """Format the result banner text based on game outcome."""
+        winner = result.get('winner')
+        reason = result.get('reason', 'Game completed')
+        result_code = result.get('result_code', '')
+        
+        if winner is None:
+            # Draw game
+            if result_code == 'DR':
+                return f"Draw - {reason}"
+            else:
+                return f"Game Ended - {reason}"
+        else:
+            # Someone won
+            return f"Winner: {winner} - {reason}"
+    
     def generate_html(self, game_data: Dict[str, Any]) -> str:
         """Generate complete interactive HTML from game data."""
         metadata = game_data.get('game_metadata', {})
@@ -76,10 +92,15 @@ class JSONToHTMLConverter:
         board_states.append([row[:] for row in current_board])  # Initial empty board
         
         for move in moves:
-            row, col = move['position']
-            piece = 'X' if 'Black' in move['player'] or move['move_number'] % 2 == 1 else 'O'
-            current_board[row][col] = piece
-            board_states.append([row[:] for row in current_board])
+            # Skip illegal moves - they don't change the board state
+            if move.get('illegal', False):
+                # Add current board state for illegal moves (no change)
+                board_states.append([row[:] for row in current_board])
+            else:
+                row, col = move['position']
+                piece = 'X' if 'Black' in move['player'] or move['move_number'] % 2 == 1 else 'O'
+                current_board[row][col] = piece
+                board_states.append([row[:] for row in current_board])
         
         html = f"""
 <!DOCTYPE html>
@@ -223,6 +244,18 @@ class JSONToHTMLConverter:
             background: #007bff;
             color: white;
         }}
+        .move-item.illegal {{
+            background: #f8d7da;
+            border-left: 4px solid #dc3545;
+            color: #721c24;
+        }}
+        .move-item.illegal:hover {{
+            background: #f1b0b7;
+        }}
+        .move-item.illegal.current {{
+            background: #dc3545;
+            color: white;
+        }}
         .move-item.current .llm-conversation {{
             background: #f8f9fa;
             color: #212529;
@@ -304,7 +337,7 @@ class JSONToHTMLConverter:
         </div>
         
         <div class="result-banner">
-            🏆 Winner: {result.get('winner', 'Draw')} - {result.get('reason', 'Game completed')}
+            🏆 {self._format_result_banner(result)}
         </div>
         
         <div class="game-info">
@@ -353,8 +386,27 @@ class JSONToHTMLConverter:
         # Add move history
         for i, move in enumerate(moves):
             player_symbol = 'X' if 'Black' in move['player'] or (i + 1) % 2 == 1 else 'O'
-            move_html = f"""
-                    <div class="move-item" onclick="goToMove({i + 1})">
+            illegal_class = " illegal" if move.get('illegal', False) else ""
+            
+            if move.get('illegal', False):
+                # Handle illegal moves
+                if move['position'] is None:
+                    # Timeout case
+                    position_text = f"TIMEOUT - {move.get('reason', 'Unknown error')}"
+                else:
+                    # Invalid position case
+                    position_text = f"ILLEGAL MOVE: ({move['position'][0]}, {move['position'][1]}) - {move.get('reason', 'Invalid position')}"
+                    
+                move_html = f"""
+                    <div class="move-item{illegal_class}" onclick="goToMove({i + 1})">
+                        <strong>Move {i + 1}: {player_symbol} ❌</strong><br>
+                        {move['player']}<br>
+                        {position_text}<br>
+                        Time: {move['time']:.2f}s"""
+            else:
+                # Handle legal moves
+                move_html = f"""
+                    <div class="move-item{illegal_class}" onclick="goToMove({i + 1})">
                         <strong>Move {i + 1}: {player_symbol}</strong><br>
                         {move['player']}<br>
                         Position: ({move['position'][0]}, {move['position'][1]})<br>
@@ -467,9 +519,19 @@ class JSONToHTMLConverter:
             let currentPlayerText = "Game Start";
             if (currentMove > 0) {{
                 const move = moves[currentMove - 1];
-                const row = move.position && move.position[0] !== undefined ? move.position[0] : 'unknown';
-                const col = move.position && move.position[1] !== undefined ? move.position[1] : 'unknown';
-                currentPlayerText = `${{move.player}} played (${{row}}, ${{col}})`;
+                if (move.illegal) {{
+                    if (move.position === null) {{
+                        currentPlayerText = `${{move.player}} - TIMEOUT (${{move.reason || 'Unknown error'}})`;
+                    }} else {{
+                        const row = move.position[0];
+                        const col = move.position[1];
+                        currentPlayerText = `${{move.player}} - ILLEGAL MOVE (${{row}}, ${{col}}) - ${{move.reason || 'Invalid position'}}`;
+                    }}
+                }} else {{
+                    const row = move.position && move.position[0] !== undefined ? move.position[0] : 'unknown';
+                    const col = move.position && move.position[1] !== undefined ? move.position[1] : 'unknown';
+                    currentPlayerText = `${{move.player}} played (${{row}}, ${{col}})`;
+                }}
             }}
             document.getElementById('current-player').textContent = currentPlayerText;
             

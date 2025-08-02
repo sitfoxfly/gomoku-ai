@@ -27,7 +27,7 @@ Main Components:
 
 from .core import Player, Move, GameState, GameResult, GomokuGame
 from .agents import Agent, LLMGomokuAgent, SimpleGomokuAgent
-from .arena import GomokuArena, Tournament
+from .arena import GomokuArena
 from .llm import OpenAIGomokuClient
 
 # HuggingFace support (optional import)
@@ -50,8 +50,8 @@ __all__ = [
     # Strategies  
     'StandardStrategy', 'AggressiveStrategy',
     
-    # Arena and tournaments
-    'GomokuArena', 'Tournament',
+    # Arena 
+    'GomokuArena',
     
     # LLM clients
     'OpenAIGomokuClient',

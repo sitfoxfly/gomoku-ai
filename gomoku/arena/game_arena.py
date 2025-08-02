@@ -101,7 +101,25 @@ class GomokuArena:
 
                 # Make move
                 if not game.make_move(row, col):
-                    # Invalid move
+                    # Invalid move - log it before returning
+                    # Collect all LLM logs from this turn
+                    llm_conversations = []
+                    current_log_count = len(agent_logs)
+                    if current_log_count > initial_log_count:
+                        llm_conversations = agent_logs[initial_log_count:current_log_count]
+                    
+                    game_log.append(
+                        {
+                            "move_number": len(game.state.move_history) + 1,  # Would have been next move
+                            "player": current_agent.agent_id,
+                            "position": (row, col),
+                            "time": move_time,
+                            "illegal": True,
+                            "reason": "Invalid position (occupied or out of bounds)",
+                            "llm_conversations": llm_conversations,
+                        }
+                    )
+                    
                     if verbose:
                         print(f"Invalid move by {current_agent.agent_id}: ({row}, {col})")
                         print("Final board:")
@@ -112,6 +130,7 @@ class GomokuArena:
                         "winner": agents[winner].agent_id,
                         "loser": current_agent.agent_id,
                         "result": GameResult.INVALID_MOVE,
+                        "result_code": GameResult.INVALID_MOVE.get_code(),
                         "reason": f"Invalid move by {current_agent.agent_id} at ({row}, {col})",
                         "moves": len(game.state.move_history),
                         "game_log": game_log,
@@ -132,6 +151,7 @@ class GomokuArena:
                         "player": current_agent.agent_id,
                         "position": (row, col),
                         "time": move_time,
+                        "illegal": False,
                         "llm_conversations": llm_conversations,
                     }
                 )
@@ -150,10 +170,12 @@ class GomokuArena:
                         print("Final board:")
                         print(self.board_to_string(game.state))
                     
+                    result = GameResult.BLACK_WIN if winner == Player.BLACK else GameResult.WHITE_WIN
                     return {
                         "winner": agents[winner].agent_id,
                         "loser": agents[Player.WHITE if winner == Player.BLACK else Player.BLACK].agent_id,
-                        "result": GameResult.BLACK_WIN if winner == Player.BLACK else GameResult.WHITE_WIN,
+                        "result": result,
+                        "result_code": result.get_code(),
                         "reason": "Five in a row",
                         "moves": len(game.state.move_history),
                         "game_log": game_log,
@@ -173,6 +195,7 @@ class GomokuArena:
                     return {
                         "winner": None,
                         "result": GameResult.DRAW,
+                        "result_code": GameResult.DRAW.get_code(),
                         "reason": "Board full",
                         "moves": len(game.state.move_history),
                         "game_log": game_log,
@@ -183,6 +206,19 @@ class GomokuArena:
                     }
 
             except asyncio.TimeoutError:
+                # Log the timeout as an illegal move
+                game_log.append(
+                    {
+                        "move_number": len(game.state.move_history) + 1,  # Would have been next move
+                        "player": current_agent.agent_id,
+                        "position": None,  # No position for timeout
+                        "time": self.time_limit,  # Time limit exceeded
+                        "illegal": True,
+                        "reason": f"Timeout (>{self.time_limit}s)",
+                        "llm_conversations": [],  # Can't collect logs on timeout
+                    }
+                )
+                
                 if verbose:
                     print(f"Timeout by {current_agent.agent_id}")
                     print("Final board:")
@@ -192,7 +228,8 @@ class GomokuArena:
                 return {
                     "winner": agents[winner].agent_id,
                     "loser": current_agent.agent_id,
-                    "result": GameResult.INVALID_MOVE,
+                    "result": GameResult.TIMEOUT,
+                    "result_code": GameResult.TIMEOUT.get_code(),
                     "reason": f"Timeout (>{self.time_limit}s)",
                     "moves": len(game.state.move_history),
                     "game_log": game_log,
