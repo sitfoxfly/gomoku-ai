@@ -97,7 +97,35 @@ class GomokuArena:
                 move = await asyncio.wait_for(current_agent.get_move(game.state.copy()), timeout=self.time_limit)
                 move_time = time.time() - move_start
 
-                row, col = move
+                # Validate move format
+                try:
+                    if isinstance(move, (list, tuple)) and len(move) == 2:
+                        row, col = int(move[0]), int(move[1])
+                    else:
+                        raise ValueError(f"Invalid move format: {move}")
+                except (ValueError, TypeError) as e:
+                    # Invalid move format - log it before returning
+                    game_log.append(
+                        {
+                            "move_number": len(game.state.move_history) + 1,
+                            "player": current_agent.agent_id,
+                            "move": {"row": "invalid", "col": "invalid"},
+                            "valid": False,
+                            "game_ended": True,
+                            "time_taken": move_time,
+                            "error": f"Invalid move format: {e}",
+                            "llm_conversations": []
+                        }
+                    )
+                    return {
+                        "winner": Player.WHITE if current_agent == agent1 else Player.BLACK,
+                        "result": GameResult.BLACK_WIN if current_agent == agent2 else GameResult.WHITE_WIN,
+                        "moves": len(game.state.move_history),
+                        "board": game.state.board,
+                        "winning_sequence": [],
+                        "game_log": game_log,
+                        "error": f"Agent {current_agent.agent_id} returned invalid move format: {e}"
+                    }
 
                 # Make move
                 if not game.make_move(row, col):
