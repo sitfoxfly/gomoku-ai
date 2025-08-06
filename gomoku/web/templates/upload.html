@@ -1,0 +1,116 @@
+{% extends "base.html" %}
+
+{% block title %}Upload Agent - Gomoku AI Arena{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-8 mx-auto">
+        <h1><i class="fas fa-upload"></i> Upload Your Gomoku Agent</h1>
+        <p class="lead">Submit your AI agent to compete in the tournament!</p>
+
+        <div class="card">
+            <div class="card-body">
+                <form method="POST" enctype="multipart/form-data">
+                    <div class="mb-3">
+                        <label for="name" class="form-label">Agent Name *</label>
+                        <input type="text" class="form-control" id="name" name="name" required
+                               placeholder="e.g., SuperGomokuAI">
+                        <div class="form-text">Choose a unique name for your agent</div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="author" class="form-label">Author Name *</label>
+                        <input type="text" class="form-control" id="author" name="author" required
+                               placeholder="Your name">
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="description" class="form-label">Description</label>
+                        <textarea class="form-control" id="description" name="description" rows="3"
+                                  placeholder="Describe your agent's strategy (optional)"></textarea>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="version" class="form-label">Version</label>
+                                <input type="text" class="form-control" id="version" name="version" 
+                                       value="1.0.0" placeholder="1.0.0">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="class_name" class="form-label">Agent Class Name</label>
+                                <input type="text" class="form-control" id="class_name" name="class_name" 
+                                       value="Agent" placeholder="Agent">
+                                <div class="form-text">Name of your agent class in the Python file</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="agent_file" class="form-label">Agent Python File *</label>
+                        <input type="file" class="form-control" id="agent_file" name="agent_file" 
+                               accept=".py" required>
+                        <div class="form-text">
+                            Upload your Python file containing the agent implementation
+                        </div>
+                    </div>
+
+                    <div class="alert alert-info">
+                        <h6><i class="fas fa-info-circle"></i> Agent Requirements:</h6>
+                        <ul class="mb-0">
+                            <li>Your Python file must contain a class that inherits from <code>Agent</code></li>
+                            <li>Implement the <code>async def get_move(self, game_state: GameState) -> Tuple[int, int]</code> method</li>
+                            <li>Return valid board coordinates (0-14) as a tuple</li>
+                            <li>Avoid dangerous operations (file I/O, network, system calls)</li>
+                            <li>Keep move calculation under 10 seconds</li>
+                        </ul>
+                    </div>
+
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-primary btn-lg">
+                            <i class="fas fa-upload"></i> Upload Agent
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <div class="mt-4">
+            <h4>Example Agent Template</h4>
+            <div class="card">
+                <div class="card-body">
+                    <pre><code>from gomoku.agents.base import Agent
+from gomoku.core.models import GameState
+from typing import Tuple
+import random
+
+class MyAgent(Agent):
+    """My custom Gomoku agent."""
+    
+    async def get_move(self, game_state: GameState) -> Tuple[int, int]:
+        """
+        Choose the next move for this agent.
+        
+        Args:
+            game_state: Current game state with board and move history
+            
+        Returns:
+            Tuple of (row, col) coordinates for the next move
+        """
+        # Find all empty positions
+        empty_positions = []
+        for row in range(15):
+            for col in range(15):
+                if game_state.board[row][col] == '.':
+                    empty_positions.append((row, col))
+        
+        # Choose a random empty position
+        return random.choice(empty_positions)</code></pre>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

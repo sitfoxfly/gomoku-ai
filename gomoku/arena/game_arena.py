@@ -129,7 +129,7 @@ class GomokuArena:
                     return {
                         "winner": agents[winner].agent_id,
                         "loser": current_agent.agent_id,
-                        "result": GameResult.INVALID_MOVE,
+                        "result": GameResult.INVALID_MOVE.value,
                         "result_code": GameResult.INVALID_MOVE.get_code(),
                         "reason": f"Invalid move by {current_agent.agent_id} at ({row}, {col})",
                         "moves": len(game.state.move_history),
@@ -174,7 +174,7 @@ class GomokuArena:
                     return {
                         "winner": agents[winner].agent_id,
                         "loser": agents[Player.WHITE if winner == Player.BLACK else Player.BLACK].agent_id,
-                        "result": result,
+                        "result": result.value,
                         "result_code": result.get_code(),
                         "reason": "Five in a row",
                         "moves": len(game.state.move_history),
@@ -194,7 +194,7 @@ class GomokuArena:
                     
                     return {
                         "winner": None,
-                        "result": GameResult.DRAW,
+                        "result": GameResult.DRAW.value,
                         "result_code": GameResult.DRAW.get_code(),
                         "reason": "Board full",
                         "moves": len(game.state.move_history),
@@ -228,7 +228,7 @@ class GomokuArena:
                 return {
                     "winner": agents[winner].agent_id,
                     "loser": current_agent.agent_id,
-                    "result": GameResult.TIMEOUT,
+                    "result": GameResult.TIMEOUT.value,
                     "result_code": GameResult.TIMEOUT.get_code(),
                     "reason": f"Timeout (>{self.time_limit}s)",
                     "moves": len(game.state.move_history),

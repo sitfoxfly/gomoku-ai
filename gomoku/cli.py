@@ -101,6 +101,19 @@ def create_parser():
     play_parser.add_argument("--log", help="Generate JSON log file at specified path")
     play_parser.add_argument("--html", action="store_true", help="Automatically generate HTML visualization when JSON log is created")
     
+    # Web command
+    web_parser = subparsers.add_parser("web", help="Web interface commands")
+    web_subparsers = web_parser.add_subparsers(dest="web_command", help="Web sub-commands")
+    
+    # Web run command
+    web_run_parser = web_subparsers.add_parser("run", help="Run the web server")
+    web_run_parser.add_argument("--host", default="127.0.0.1", help="Host to bind to (default: 127.0.0.1)")
+    web_run_parser.add_argument("--port", type=int, default=5000, help="Port to bind to (default: 5000)")
+    web_run_parser.add_argument("--debug", action="store_true", help="Run in debug mode")
+    
+    # Web init-db command
+    web_init_parser = web_subparsers.add_parser("init-db", help="Initialize the database")
+    
     return parser
 
 
@@ -134,6 +147,8 @@ async def main():
             await handle_validate_command(loader, args)
         elif args.command == "play":
             await handle_play_command(loader, args)
+        elif args.command == "web":
+            await handle_web_command(args)
         elif args.agent1 and args.agent2:
             # Direct play without subcommand
             await play_game(loader, args.agent1, args.agent2, args)
@@ -225,6 +240,39 @@ def parse_agent_spec(agent_spec: str) -> tuple[str, str]:
         return agent_name.strip(), instance_id.strip()
     else:
         return agent_spec.strip(), None
+
+
+async def handle_web_command(args):
+    """Handle web interface commands."""
+    try:
+        from .web.app import create_app
+        from .web.models import db
+    except ImportError as e:
+        print("Web interface not available. Install with: pip install flask flask-sqlalchemy")
+        print(f"Import error: {e}")
+        return
+    
+    if args.web_command == "run":
+        print(f"Starting web server at http://{args.host}:{args.port}")
+        if args.debug:
+            print("Running in debug mode")
+        
+        app = create_app()
+        
+        # Initialize database if it doesn't exist
+        with app.app_context():
+            db.create_all()
+            print("Database initialized")
+        
+        app.run(host=args.host, port=args.port, debug=args.debug)
+        
+    elif args.web_command == "init-db":
+        app = create_app()
+        with app.app_context():
+            db.create_all()
+            print("Database initialized successfully!")
+    else:
+        print("Web command required. Use 'run' or 'init-db'")
 
 
 async def play_game(loader: AgentLoader, agent1_spec: str, agent2_spec: str, args):

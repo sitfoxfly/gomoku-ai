@@ -1,0 +1,141 @@
+{% extends "base.html" %}
+
+{% block title %}Leaderboard - Gomoku AI Arena{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-12">
+        <h1><i class="fas fa-trophy"></i> Leaderboard</h1>
+        <p class="lead">Top performing agents ranked by ELO rating</p>
+    </div>
+</div>
+
+{% if leaders %}
+<div class="card">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>Rank</th>
+                        <th>Agent</th>
+                        <th>Author</th>
+                        <th>ELO Rating</th>
+                        <th>Games Played</th>
+                        <th>Win Rate</th>
+                        <th>Last Active</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for agent in leaders %}
+                    <tr>
+                        <td>
+                            <span class="leaderboard-rank">
+                                {% if loop.index == 1 %}
+                                    <i class="fas fa-crown text-warning"></i> #1
+                                {% elif loop.index == 2 %}
+                                    <i class="fas fa-medal text-secondary"></i> #2
+                                {% elif loop.index == 3 %}
+                                    <i class="fas fa-medal text-warning"></i> #3
+                                {% else %}
+                                    #{{ loop.index }}
+                                {% endif %}
+                            </span>
+                        </td>
+                        <td>
+                            <a href="{{ url_for('agent_detail', agent_id=agent.id) }}" 
+                               class="text-decoration-none">
+                                <strong>{{ agent.name }}</strong>
+                            </a>
+                            {% if agent.description %}
+                            <br><small class="text-muted">{{ agent.description[:50] }}{% if agent.description|length > 50 %}...{% endif %}</small>
+                            {% endif %}
+                        </td>
+                        <td>{{ agent.author }}</td>
+                        <td>
+                            <span class="badge bg-primary">{{ agent.elo_rating }}</span>
+                        </td>
+                        <td>{{ agent.games_played }}</td>
+                        <td>
+                            {% if agent.games_played > 0 %}
+                                <span class="win-rate">{{ "%.1f"|format(agent.win_rate) }}%</span>
+                                <div class="progress mt-1" style="height: 4px;">
+                                    <div class="progress-bar bg-success" role="progressbar" 
+                                         style="width: {{ agent.win_rate }}%"></div>
+                                </div>
+                            {% else %}
+                                <span class="text-muted">No games</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <small class="text-muted">
+                                {% if agent.uploaded_at %}
+                                    {% if agent.uploaded_at.strftime is defined %}
+                                        {{ agent.uploaded_at.strftime('%Y-%m-%d') }}
+                                    {% else %}
+                                        {{ agent.uploaded_at[:10] if agent.uploaded_at|length >= 10 else agent.uploaded_at }}
+                                    {% endif %}
+                                {% else %}
+                                    Unknown
+                                {% endif %}
+                            </small>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% else %}
+<div class="text-center py-5">
+    <i class="fas fa-trophy fa-4x text-muted mb-3"></i>
+    <h3>No Agents Yet</h3>
+    <p class="text-muted">Be the first to upload an agent and start competing!</p>
+    <a href="{{ url_for('upload_agent') }}" class="btn btn-primary">
+        <i class="fas fa-upload"></i> Upload Your Agent
+    </a>
+</div>
+{% endif %}
+
+{% if leaders %}
+<div class="mt-4">
+    <div class="row">
+        <div class="col-md-4">
+            <div class="card bg-light">
+                <div class="card-body text-center">
+                    <h5><i class="fas fa-chart-line"></i> ELO System</h5>
+                    <p class="small">
+                        Agents start with 1500 ELO rating. 
+                        Rating increases with wins and decreases with losses, 
+                        based on opponent strength.
+                    </p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card bg-light">
+                <div class="card-body text-center">
+                    <h5><i class="fas fa-sync"></i> Auto Tournaments</h5>
+                    <p class="small">
+                        Rankings are updated automatically as new tournaments run. 
+                        Each tournament is a round-robin between all valid agents.
+                    </p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card bg-light">
+                <div class="card-body text-center">
+                    <h5><i class="fas fa-shield-alt"></i> Fair Play</h5>
+                    <p class="small">
+                        All agents run with the same time limits and 
+                        in isolated environments to ensure fair competition.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

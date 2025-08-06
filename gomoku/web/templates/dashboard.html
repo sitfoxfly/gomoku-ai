@@ -1,0 +1,175 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - Gomoku AI Arena{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-12">
+        <h1><i class="fas fa-tachometer-alt"></i> Dashboard</h1>
+        <p class="lead">Welcome to the Gomoku AI Competition Platform</p>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card bg-primary text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h5 class="card-title">Active Agents</h5>
+                        <h2>{{ total_agents }}</h2>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-robot fa-2x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-success text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h5 class="card-title">Games Played</h5>
+                        <h2>{{ total_games }}</h2>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-chess-board fa-2x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-warning text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h5 class="card-title">Running Tournaments</h5>
+                        <h2>{{ active_tournaments|length }}</h2>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-trophy fa-2x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-info text-white">
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('create_tournament') }}" style="margin: 0;">
+                    <button type="submit" class="btn btn-light btn-sm">
+                        <i class="fas fa-play"></i> Start Tournament
+                    </button>
+                </form>
+                <small class="mt-2 d-block">Quick start a new tournament</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-6">
+        <h3><i class="fas fa-trophy"></i> Top Performers</h3>
+        {% if leaderboard %}
+            <div class="list-group">
+                {% for agent in leaderboard[:5] %}
+                <div class="list-group-item d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="mb-1">{{ agent.name }}</h6>
+                        <small class="text-muted">by {{ agent.author }}</small>
+                        <div class="elo-rating">ELO: {{ agent.elo_rating }}</div>
+                    </div>
+                    <div class="text-end">
+                        <span class="badge bg-success">{{ "%.1f"|format(agent.win_rate) }}% wins</span>
+                        <small class="d-block text-muted">{{ agent.games_played }} games</small>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            <div class="mt-2">
+                <a href="{{ url_for('leaderboard') }}" class="btn btn-outline-primary btn-sm">
+                    View Full Leaderboard
+                </a>
+            </div>
+        {% else %}
+            <p class="text-muted">No agents have played games yet. <a href="{{ url_for('upload_agent') }}">Upload an agent</a> to get started!</p>
+        {% endif %}
+    </div>
+
+    <div class="col-md-6">
+        <h3><i class="fas fa-history"></i> Recent Games</h3>
+        {% if recent_games %}
+            <div class="list-group">
+                {% for game in recent_games[:5] %}
+                <div class="list-group-item">
+                    <div class="d-flex justify-content-between">
+                        <h6 class="mb-1">
+                            <span class="game-result-{{ game.result }}">
+                                {{ game.black_agent }} vs {{ game.white_agent }}
+                            </span>
+                        </h6>
+                        <small>{{ game.completed_at }}</small>
+                    </div>
+                    <p class="mb-1">
+                        {% if game.result == 'black_wins' %}
+                            <i class="fas fa-circle text-dark"></i> {{ game.black_agent }} wins
+                        {% elif game.result == 'white_wins' %}
+                            <i class="far fa-circle text-secondary"></i> {{ game.white_agent }} wins
+                        {% elif game.result == 'draw' %}
+                            <i class="fas fa-equals text-warning"></i> Draw
+                        {% else %}
+                            <i class="fas fa-exclamation-triangle text-danger"></i> Error
+                        {% endif %}
+                    </p>
+                    <small class="text-muted">{{ game.move_count }} moves</small>
+                </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <p class="text-muted">No games played yet.</p>
+        {% endif %}
+    </div>
+</div>
+
+{% if active_tournaments %}
+<div class="row mt-4">
+    <div class="col-md-12">
+        <h3><i class="fas fa-cog fa-spin"></i> Running Tournaments</h3>
+        {% for tournament in active_tournaments %}
+        <div class="card mb-3">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h5 class="card-title">{{ tournament.name }}</h5>
+                        <p class="card-text">Started: {{ tournament.started_at.strftime('%Y-%m-%d %H:%M') if tournament.started_at else 'Not started' }}</p>
+                    </div>
+                    <div class="text-end">
+                        <div class="progress mb-2" style="width: 200px;">
+                            <div class="progress-bar" role="progressbar" style="width: {{ tournament.progress }}%">
+                                {{ "%.1f"|format(tournament.progress) }}%
+                            </div>
+                        </div>
+                        <small class="text-muted">{{ tournament.completed_games }}/{{ tournament.total_games }} games</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Auto-refresh dashboard every 30 seconds if tournaments are running
+{% if active_tournaments %}
+setTimeout(function() {
+    location.reload();
+}, 30000);
+{% endif %}
+</script>
+{% endblock %}

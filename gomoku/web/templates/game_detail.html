@@ -1,0 +1,252 @@
+{% extends "base.html" %}
+
+{% block title %}Game #{{ game.id }} - Gomoku AI Arena{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-12">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{{ url_for('index') }}">Dashboard</a></li>
+                <li class="breadcrumb-item"><a href="{{ url_for('tournaments_list') }}">Tournaments</a></li>
+                {% if game.tournament %}
+                <li class="breadcrumb-item">
+                    <a href="{{ url_for('tournament_detail', tournament_id=game.tournament_id) }}">
+                        {{ game.tournament.name }}
+                    </a>
+                </li>
+                {% endif %}
+                <li class="breadcrumb-item active">Game #{{ game.id }}</li>
+            </ol>
+        </nav>
+
+        <h1><i class="fas fa-chess-board"></i> Game #{{ game.id }}</h1>
+        <p class="text-muted">
+            {{ game.black_agent.name }} vs {{ game.white_agent.name }} - 
+            {{ game.started_at.strftime('%Y-%m-%d %H:%M') if game.started_at else 'Unknown' }}
+        </p>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-body text-center">
+                <h5><i class="fas fa-circle text-dark"></i> Black Player</h5>
+                <h4>
+                    <a href="{{ url_for('agent_detail', agent_id=game.black_agent_id) }}">
+                        {{ game.black_agent.name }}
+                    </a>
+                </h4>
+                <p class="text-muted">by {{ game.black_agent.author }}</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-body text-center">
+                <h5><i class="far fa-circle text-secondary"></i> White Player</h5>
+                <h4>
+                    <a href="{{ url_for('agent_detail', agent_id=game.white_agent_id) }}">
+                        {{ game.white_agent.name }}
+                    </a>
+                </h4>
+                <p class="text-muted">by {{ game.white_agent.author }}</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-body">
+                <h5><i class="fas fa-info-circle"></i> Game Result</h5>
+                <div class="row text-center">
+                    <div class="col-md-3">
+                        <div class="h4">
+                            {% if game.result == 'black_wins' %}
+                                <span class="text-success">
+                                    <i class="fas fa-trophy"></i> {{ game.black_agent.name }}
+                                </span>
+                            {% elif game.result == 'white_wins' %}
+                                <span class="text-success">
+                                    <i class="fas fa-trophy"></i> {{ game.white_agent.name }}
+                                </span>
+                            {% elif game.result == 'draw' %}
+                                <span class="text-warning">
+                                    <i class="fas fa-equals"></i> Draw
+                                </span>
+                            {% else %}
+                                <span class="text-danger">
+                                    <i class="fas fa-exclamation-triangle"></i> Error
+                                </span>
+                            {% endif %}
+                        </div>
+                        <small class="text-muted">Winner</small>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="h4">{{ game.move_count }}</div>
+                        <small class="text-muted">Moves</small>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="h4">
+                            {% if game.started_at and game.completed_at %}
+                                {{ "%.1f"|format((game.completed_at - game.started_at).total_seconds()) }}s
+                            {% else %}
+                                -
+                            {% endif %}
+                        </div>
+                        <small class="text-muted">Duration</small>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="h4">{{ game.completed_at.strftime('%H:%M') if game.completed_at else 'In Progress' }}</div>
+                        <small class="text-muted">Completed</small>
+                    </div>
+                </div>
+                
+                {% if game.error_message %}
+                <div class="mt-3">
+                    <div class="alert alert-danger">
+                        <strong>Error:</strong> {{ game.error_message }}
+                    </div>
+                </div>
+                {% endif %}
+                
+                <div class="mt-3">
+                    <a href="{{ url_for('game_html_view', game_id=game.id) }}" 
+                       class="btn btn-primary" target="_blank">
+                        <i class="fas fa-eye"></i> View Interactive Game Replay
+                    </a>
+                    <small class="text-muted d-block mt-1">
+                        Opens in a new window with move-by-move visualization
+                    </small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if game_log %}
+<div class="row">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-list-alt"></i> Game Log</h5>
+            </div>
+            <div class="card-body">
+                {% if game_log.get('game_log') %}
+                <div class="table-responsive">
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>Move</th>
+                                <th>Player</th>
+                                <th>Position</th>
+                                <th>Time</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for move in game_log.game_log %}
+                            <tr {% if move.get('illegal') %}class="table-danger"{% endif %}>
+                                <td>{{ move.get('move_number', '-') }}</td>
+                                <td>{{ move.get('player', '-') }}</td>
+                                <td>
+                                    {% if move.get('position') %}
+                                        ({{ move.position[0] }}, {{ move.position[1] }})
+                                    {% else %}
+                                        -
+                                    {% endif %}
+                                </td>
+                                <td>{{ "%.2f"|format(move.get('time', 0)) }}s</td>
+                                <td>
+                                    {% if move.get('illegal') %}
+                                        <span class="text-danger">
+                                            <i class="fas fa-times"></i> 
+                                            {{ move.get('reason', 'Invalid') }}
+                                        </span>
+                                    {% else %}
+                                        <span class="text-success">
+                                            <i class="fas fa-check"></i> Valid
+                                        </span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% endif %}
+
+                {% if game_log.get('final_board') %}
+                <div class="mt-4">
+                    <h6>Final Board Position</h6>
+                    <div class="board-container bg-light p-3" style="font-family: monospace; font-size: 16px; line-height: 1.2;">
+                        {% for row in game_log.final_board %}
+                        <div class="board-row">
+                            <span class="row-number" style="color: #666; margin-right: 10px;">{{ "%2d"|format(loop.index0) }}</span>
+                            {% set row_idx = loop.index0 %}
+                            {% for cell in row %}
+                                {% set col_idx = loop.index0 %}
+                                {% set is_winning = false %}
+                                {% if game_log.get('winning_sequence') %}
+                                    {% for win_pos in game_log.winning_sequence %}
+                                        {% if win_pos[0] == row_idx and win_pos[1] == col_idx %}
+                                            {% set is_winning = true %}
+                                        {% endif %}
+                                    {% endfor %}
+                                {% endif %}
+                                
+                                {% if cell == 'X' %}
+                                    {% if is_winning %}
+                                        <span style="color: #000; font-weight: bold; background-color: #ffff99;">●</span><span> </span>
+                                    {% else %}
+                                        <span style="color: #000; font-weight: bold;">●</span><span> </span>
+                                    {% endif %}
+                                {% elif cell == 'O' %}
+                                    {% if is_winning %}
+                                        <span style="color: #666; font-weight: bold; background-color: #ffff99;">○</span><span> </span>
+                                    {% else %}
+                                        <span style="color: #666; font-weight: bold;">○</span><span> </span>
+                                    {% endif %}
+                                {% else %}
+                                    <span style="color: #ccc;">·</span><span> </span>
+                                {% endif %}
+                            {% endfor %}
+                        </div>
+                        {% endfor %}
+                        <div class="board-footer mt-2" style="color: #666;">
+                            <span style="margin-right: 10px;">  </span>
+                            {% for cell in game_log.final_board[0] %}{{ loop.index0 }} {% endfor %}
+                        </div>
+                    </div>
+                    <div class="mt-2">
+                        <small class="text-muted">
+                            <span style="color: #000;">●</span> Black (X) pieces &nbsp;&nbsp;
+                            <span style="color: #666;">○</span> White (O) pieces &nbsp;&nbsp;
+                            <span style="color: #ccc;">·</span> Empty positions
+                            {% if game_log.get('winning_sequence') %}
+                            &nbsp;&nbsp;<span style="background-color: #ffff99; padding: 1px 3px;">●</span> Winning sequence
+                            {% endif %}
+                        </small>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+{% if not game_log and game.game_log_path %}
+<div class="row">
+    <div class="col-md-12">
+        <div class="alert alert-info">
+            <i class="fas fa-info-circle"></i> 
+            Game log file exists at {{ game.game_log_path }} but could not be loaded for display.
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

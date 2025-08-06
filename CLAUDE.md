@@ -12,8 +12,11 @@ pip install -e .
 # With HuggingFace transformer support
 pip install -e ".[huggingface]"
 
+# With web interface support
+pip install -e ".[web]"
+
 # Full development setup
-pip install -e ".[huggingface,dev]"
+pip install -e ".[huggingface,web,dev]"
 ```
 
 ### Running and Testing
@@ -29,6 +32,12 @@ python -m gomoku --discover-agents ./agents play agent1 agent2
 
 # Convert JSON logs to HTML
 python -m gomoku.utils json_to_html game_log.json
+
+# Run the web interface (agent submission system)
+python -m gomoku web run --debug
+
+# Initialize web database
+python -m gomoku web init-db
 
 # Run tests (if test directory exists)
 pytest
@@ -171,3 +180,81 @@ The codebase uses pytest with async support. When writing tests:
 - Create GameState instances for testing game logic
 - Mock LLM clients when testing agent behavior
 - Use the AgentLoader for testing external agent discovery
+
+## Web Interface (Agent Submission System)
+
+The framework includes a complete web-based submission system that allows students to upload their agents and compete in automated tournaments.
+
+### Features
+
+**Upload Portal**
+- Simple web interface for agent file uploads
+- Automatic validation of agent code and structure
+- Security scanning to prevent malicious code
+- Real-time feedback on upload status
+
+**Tournament System**
+- Automated round-robin tournaments between all valid agents
+- Background processing with progress tracking
+- ELO rating system for fair ranking
+- Detailed game logs and statistics
+
+**Leaderboard & Analytics**
+- Real-time rankings based on ELO ratings
+- Win/loss statistics and performance metrics
+- Game history and replay functionality
+- Agent performance tracking over time
+
+### Architecture
+
+**`gomoku/web/`** - Web interface components
+- `app.py`: Flask application with upload and tournament endpoints
+- `models.py`: Database models for agents, tournaments, and games
+- `tournament.py`: Tournament runner and ELO rating system
+- `validator.py`: Security and functionality validation pipeline
+- `templates/`: HTML templates for web interface
+
+### Running the Web Interface
+
+```bash
+# Install web dependencies
+pip install -e ".[web]"
+
+# Initialize database
+python -m gomoku web init-db
+
+# Run development server
+python -m gomoku web run --debug
+
+# Run production server
+python -m gomoku web run --host 0.0.0.0 --port 8000
+```
+
+### Security Features
+
+- **Code Validation**: AST parsing to detect dangerous imports and functions
+- **Sandbox Execution**: Isolated environment for running untrusted agents
+- **Resource Limits**: CPU, memory, and time constraints
+- **File System**: Read-only access except for logs
+
+### Student Workflow
+
+1. **Develop Agent**: Create Python file implementing the Agent interface
+2. **Upload via Web**: Use browser to upload agent with metadata
+3. **Validation**: System automatically validates code safety and functionality
+4. **Tournament Entry**: Valid agents automatically enter tournaments
+5. **Monitor Performance**: Track progress on leaderboard and view game replays
+
+### Database Schema
+
+- **Agent**: Stores uploaded agents with validation status and statistics
+- **Tournament**: Tracks tournament sessions and progress
+- **Game**: Individual games with move history and results
+
+### API Endpoints
+
+- `POST /upload`: Agent file upload with validation
+- `GET /api/leaderboard`: Current rankings and statistics
+- `GET /api/games/recent`: Recent game results
+- `POST /tournaments/create`: Start new tournament
+- `GET /api/tournaments/:id/status`: Tournament progress tracking

@@ -1,0 +1,321 @@
+{% extends "base.html" %}
+
+{% block title %}System Status - Gomoku AI Arena Admin{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-12">
+        <h1><i class="fas fa-cogs"></i> System Status</h1>
+        <p class="text-muted">Monitoring tournament workers and job queue health</p>
+    </div>
+</div>
+
+<!-- System Health Overview -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card">
+            <div class="card-body text-center">
+                <h5>System Health</h5>
+                <h3>
+                    {% if health_status.system_health == 'healthy' %}
+                        <span class="text-success"><i class="fas fa-check-circle"></i> Healthy</span>
+                    {% else %}
+                        <span class="text-warning"><i class="fas fa-exclamation-triangle"></i> Degraded</span>
+                    {% endif %}
+                </h3>
+                <small class="text-muted">{{ health_status.timestamp[:19] if health_status.timestamp else 'Unknown' }}</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card">
+            <div class="card-body text-center">
+                <h5>Active Workers</h5>
+                <h3>{{ health_status.workers.healthy if health_status.workers else 0 }} / {{ health_status.workers.active if health_status.workers else 0 }}</h3>
+                <small class="text-muted">Healthy / Total</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card">
+            <div class="card-body text-center">
+                <h5>Job Queue</h5>
+                <h3>{{ queue_status.pending if queue_status else 0 }}</h3>
+                <small class="text-muted">Pending Jobs</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card">
+            <div class="card-body text-center">
+                <h5>Running Tournaments</h5>
+                <h3>{{ health_status.tournaments.running if health_status.tournaments else 0 }}</h3>
+                <small class="text-muted">Currently Active</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Workers Status -->
+<div class="row mb-4">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-server"></i> Workers Status</h5>
+            </div>
+            <div class="card-body">
+                {% if workers %}
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Worker ID</th>
+                                    <th>Hostname</th>
+                                    <th>PID</th>
+                                    <th>Status</th>
+                                    <th>Last Heartbeat</th>
+                                    <th>Current Job</th>
+                                    <th>Stats</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for worker in workers %}
+                                <tr>
+                                    <td><code>{{ worker.id }}</code></td>
+                                    <td>{{ worker.hostname }}</td>
+                                    <td>{{ worker.pid }}</td>
+                                    <td>
+                                        {% if worker.status == 'active' %}
+                                            {% if worker.is_healthy() %}
+                                                <span class="badge badge-success">Healthy</span>
+                                            {% else %}
+                                                <span class="badge badge-warning">Unhealthy</span>
+                                            {% endif %}
+                                        {% elif worker.status == 'crashed' %}
+                                            <span class="badge badge-danger">Crashed</span>
+                                        {% else %}
+                                            <span class="badge badge-secondary">{{ worker.status.title() }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if worker.last_heartbeat %}
+                                            {{ worker.last_heartbeat.strftime('%Y-%m-%d %H:%M:%S') }}
+                                        {% else %}
+                                            <span class="text-muted">Never</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if worker.current_job_id %}
+                                            <code>{{ worker.current_job_id }}</code>
+                                        {% else %}
+                                            <span class="text-muted">None</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <small>
+                                            <i class="fas fa-check text-success"></i> {{ worker.jobs_completed }}
+                                            <i class="fas fa-times text-danger"></i> {{ worker.jobs_failed }}
+                                        </small>
+                                    </td>
+                                    <td>
+                                        {% if worker.status in ['crashed', 'active'] and not worker.is_healthy() %}
+                                            <form method="POST" action="{{ url_for('admin_force_cleanup_worker', worker_id=worker.id) }}" style="display: inline;">
+                                                <button type="submit" class="btn btn-sm btn-danger" 
+                                                        onclick="return confirm('Are you sure you want to force cleanup this worker?')">
+                                                    <i class="fas fa-trash"></i> Cleanup
+                                                </button>
+                                            </form>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle"></i> No workers registered. 
+                        Start a tournament worker process to begin processing tournaments.
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Job Queue Status -->
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-list"></i> Job Queue Statistics</h5>
+            </div>
+            <div class="card-body">
+                {% if queue_status %}
+                    <div class="row text-center">
+                        <div class="col">
+                            <div class="h4 text-primary">{{ queue_status.pending }}</div>
+                            <small>Pending</small>
+                        </div>
+                        <div class="col">
+                            <div class="h4 text-success">{{ queue_status.running }}</div>
+                            <small>Running</small>
+                        </div>
+                        <div class="col">
+                            <div class="h4 text-info">{{ queue_status.completed }}</div>
+                            <small>Completed</small>
+                        </div>
+                        <div class="col">
+                            <div class="h4 text-danger">{{ queue_status.failed }}</div>
+                            <small>Failed</small>
+                        </div>
+                    </div>
+                {% else %}
+                    <p class="text-muted">Queue status unavailable</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-chart-pie"></i> Tournament Status</h5>
+            </div>
+            <div class="card-body">
+                {% if recovery_status.tournaments %}
+                    <div class="row text-center">
+                        <div class="col">
+                            <div class="h4 text-warning">{{ recovery_status.tournaments.pending }}</div>
+                            <small>Pending</small>
+                        </div>
+                        <div class="col">
+                            <div class="h4 text-primary">{{ recovery_status.tournaments.running }}</div>
+                            <small>Running</small>
+                        </div>
+                        <div class="col">
+                            <div class="h4 text-success">{{ recovery_status.tournaments.completed }}</div>
+                            <small>Completed</small>
+                        </div>
+                        <div class="col">
+                            <div class="h4 text-danger">{{ recovery_status.tournaments.failed }}</div>
+                            <small>Failed</small>
+                        </div>
+                    </div>
+                {% else %}
+                    <p class="text-muted">Tournament status unavailable</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Recent Jobs -->
+<div class="row">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-history"></i> Recent Jobs</h5>
+            </div>
+            <div class="card-body">
+                {% if recent_jobs %}
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Job ID</th>
+                                    <th>Tournament</th>
+                                    <th>Status</th>
+                                    <th>Worker</th>
+                                    <th>Created</th>
+                                    <th>Duration</th>
+                                    <th>Retries</th>
+                                    <th>Error</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for job in recent_jobs %}
+                                <tr>
+                                    <td><code>{{ job.id[:8] }}...</code></td>
+                                    <td>
+                                        {% if job.tournament %}
+                                            <a href="{{ url_for('tournament_detail', tournament_id=job.tournament_id) }}">
+                                                {{ job.tournament.name }}
+                                            </a>
+                                        {% else %}
+                                            <span class="text-muted">Tournament {{ job.tournament_id }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if job.status == 'completed' %}
+                                            <span class="badge badge-success">{{ job.status.title() }}</span>
+                                        {% elif job.status == 'running' %}
+                                            <span class="badge badge-primary">{{ job.status.title() }}</span>
+                                        {% elif job.status == 'failed' %}
+                                            <span class="badge badge-danger">{{ job.status.title() }}</span>
+                                        {% elif job.status == 'cancelled' %}
+                                            <span class="badge badge-warning">{{ job.status.title() }}</span>
+                                        {% else %}
+                                            <span class="badge badge-secondary">{{ job.status.title() }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if job.worker_id %}
+                                            <code>{{ job.worker_id[:12] }}...</code>
+                                        {% else %}
+                                            <span class="text-muted">None</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ job.created_at.strftime('%m-%d %H:%M') if job.created_at else '-' }}</td>
+                                    <td>
+                                        {% if job.started_at and job.completed_at %}
+                                            {{ "%.1f"|format((job.completed_at - job.started_at).total_seconds()) }}s
+                                        {% elif job.started_at %}
+                                            <span class="text-primary">Running...</span>
+                                        {% else %}
+                                            <span class="text-muted">Not started</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ job.retry_count }} / {{ job.max_retries }}</td>
+                                    <td>
+                                        {% if job.error_message %}
+                                            <span class="text-danger" title="{{ job.error_message }}">
+                                                {{ job.error_message[:30] }}{% if job.error_message|length > 30 %}...{% endif %}
+                                            </span>
+                                        {% else %}
+                                            <span class="text-muted">None</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if job.status in ['running', 'pending'] and job.tournament %}
+                                            <form method="POST" action="{{ url_for('admin_force_cleanup_tournament', tournament_id=job.tournament_id) }}" style="display: inline;">
+                                                <button type="submit" class="btn btn-sm btn-warning" 
+                                                        onclick="return confirm('Are you sure you want to force cleanup this tournament?')">
+                                                    <i class="fas fa-stop"></i> Stop
+                                                </button>
+                                            </form>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle"></i> No jobs found.
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Auto-refresh every 30 seconds
+setTimeout(function() {
+    location.reload();
+}, 30000);
+</script>
+{% endblock %}

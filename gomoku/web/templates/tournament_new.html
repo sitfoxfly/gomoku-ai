@@ -1,0 +1,216 @@
+{% extends "base.html" %}
+
+{% block title %}New Tournament - Gomoku AI Arena{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-12">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{{ url_for('index') }}">Dashboard</a></li>
+                <li class="breadcrumb-item"><a href="{{ url_for('tournaments_list') }}">Tournaments</a></li>
+                <li class="breadcrumb-item active">New Tournament</li>
+            </ol>
+        </nav>
+
+        <h1><i class="fas fa-plus-circle"></i> Create New Tournament</h1>
+        <p class="lead">Select agents to participate in a round-robin tournament</p>
+    </div>
+</div>
+
+<form method="POST" action="{{ url_for('create_tournament') }}">
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="fas fa-users"></i> Select Agents</h5>
+                </div>
+                <div class="card-body">
+                    {% if agents %}
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="select_all">
+                            <label class="form-check-label fw-bold" for="select_all">
+                                Select All ({{ agents|length }} agents)
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        {% for agent in agents %}
+                        <div class="col-md-6 mb-3">
+                            <div class="card agent-card">
+                                <div class="card-body p-3">
+                                    <div class="form-check">
+                                        <input class="form-check-input agent-checkbox" type="checkbox" 
+                                               name="selected_agents" value="{{ agent.id }}" id="agent_{{ agent.id }}">
+                                        <label class="form-check-label w-100" for="agent_{{ agent.id }}">
+                                            <div class="d-flex justify-content-between align-items-start">
+                                                <div>
+                                                    <h6 class="mb-1">{{ agent.name }}</h6>
+                                                    <small class="text-muted">by {{ agent.author }}</small>
+                                                    {% if agent.description %}
+                                                    <p class="small text-muted mb-1">
+                                                        {{ agent.description[:80] }}{% if agent.description|length > 80 %}...{% endif %}
+                                                    </p>
+                                                    {% endif %}
+                                                </div>
+                                                <div class="text-end">
+                                                    <div class="badge bg-primary">{{ agent.elo_rating }}</div>
+                                                    {% if agent.games_played > 0 %}
+                                                    <br><small class="text-muted">{{ agent.games_played }} games</small>
+                                                    {% else %}
+                                                    <br><small class="text-muted">No games</small>
+                                                    {% endif %}
+                                                </div>
+                                            </div>
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle"></i> No valid agents available. 
+                        <a href="{{ url_for('upload_agent') }}">Upload some agents</a> first to create tournaments.
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="fas fa-cog"></i> Tournament Settings</h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label for="tournament_name" class="form-label">Tournament Name</label>
+                        <input type="text" class="form-control" id="tournament_name" name="tournament_name"
+                               placeholder="Leave empty for auto-generated name">
+                    </div>
+                    
+                    <div class="alert alert-info">
+                        <h6><i class="fas fa-info-circle"></i> Tournament Format</h6>
+                        <ul class="small mb-0">
+                            <li><strong>Round Robin:</strong> Every agent plays every other agent twice</li>
+                            <li><strong>Board Size:</strong> 8×8</li>
+                            <li><strong>Time Limit:</strong> 30 seconds per move</li>
+                            <li><strong>Rating:</strong> ELO ratings updated after completion</li>
+                        </ul>
+                    </div>
+                    
+                    <div id="tournament_info" class="alert alert-secondary" style="display: none;">
+                        <div id="selected_count">0 agents selected</div>
+                        <div id="total_games" class="small text-muted">0 total games</div>
+                    </div>
+                </div>
+                
+                <div class="card-footer">
+                    <button type="submit" class="btn btn-success w-100" id="start_tournament" disabled>
+                        <i class="fas fa-play"></i> Start Tournament
+                    </button>
+                    <a href="{{ url_for('tournaments_list') }}" class="btn btn-secondary w-100 mt-2">
+                        <i class="fas fa-arrow-left"></i> Back to Tournaments
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</form>
+
+<style>
+.agent-card {
+    border: 1px solid #dee2e6;
+    transition: all 0.2s ease-in-out;
+    cursor: pointer;
+}
+
+.agent-card:hover {
+    border-color: #007bff;
+    box-shadow: 0 2px 4px rgba(0,123,255,0.1);
+}
+
+.agent-card .form-check-input:checked ~ .form-check-label .card-body,
+.agent-card:has(.form-check-input:checked) {
+    background-color: #e7f3ff;
+    border-color: #007bff;
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const selectAllCheckbox = document.getElementById('select_all');
+    const agentCheckboxes = document.querySelectorAll('.agent-checkbox');
+    const startButton = document.getElementById('start_tournament');
+    const tournamentInfo = document.getElementById('tournament_info');
+    const selectedCountElement = document.getElementById('selected_count');
+    const totalGamesElement = document.getElementById('total_games');
+    
+    function updateTournamentInfo() {
+        const selectedCount = document.querySelectorAll('.agent-checkbox:checked').length;
+        const totalGames = selectedCount >= 2 ? selectedCount * (selectedCount - 1) : 0;
+        
+        selectedCountElement.textContent = `${selectedCount} agents selected`;
+        totalGamesElement.textContent = `${totalGames} total games`;
+        
+        if (selectedCount >= 2) {
+            startButton.disabled = false;
+            tournamentInfo.style.display = 'block';
+            tournamentInfo.className = 'alert alert-success';
+        } else {
+            startButton.disabled = true;
+            if (selectedCount > 0) {
+                tournamentInfo.style.display = 'block';
+                tournamentInfo.className = 'alert alert-warning';
+                selectedCountElement.textContent += ' (minimum 2 required)';
+            } else {
+                tournamentInfo.style.display = 'none';
+            }
+        }
+        
+        // Update select all checkbox
+        if (selectedCount === agentCheckboxes.length) {
+            selectAllCheckbox.checked = true;
+            selectAllCheckbox.indeterminate = false;
+        } else if (selectedCount > 0) {
+            selectAllCheckbox.checked = false;
+            selectAllCheckbox.indeterminate = true;
+        } else {
+            selectAllCheckbox.checked = false;
+            selectAllCheckbox.indeterminate = false;
+        }
+    }
+    
+    // Select all functionality
+    selectAllCheckbox.addEventListener('change', function() {
+        agentCheckboxes.forEach(checkbox => {
+            checkbox.checked = this.checked;
+        });
+        updateTournamentInfo();
+    });
+    
+    // Individual checkbox functionality
+    agentCheckboxes.forEach(checkbox => {
+        checkbox.addEventListener('change', updateTournamentInfo);
+    });
+    
+    // Make card clickable
+    document.querySelectorAll('.agent-card').forEach(card => {
+        card.addEventListener('click', function(e) {
+            if (e.target.type !== 'checkbox') {
+                const checkbox = card.querySelector('.agent-checkbox');
+                checkbox.checked = !checkbox.checked;
+                updateTournamentInfo();
+            }
+        });
+    });
+    
+    // Initial update
+    updateTournamentInfo();
+});
+</script>
+{% endblock %}

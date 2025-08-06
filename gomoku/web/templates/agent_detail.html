@@ -1,0 +1,189 @@
+{% extends "base.html" %}
+
+{% block title %}{{ agent.name }} - Gomoku AI Arena{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-8">
+        <h1>
+            <i class="fas fa-robot"></i> {{ agent.name }}
+            {% if agent.is_valid %}
+                <span class="badge bg-success">Valid</span>
+            {% else %}
+                <span class="badge bg-danger">Invalid</span>
+            {% endif %}
+        </h1>
+        
+        <div class="card mb-4">
+            <div class="card-body">
+                <h5 class="card-title">Agent Information</h5>
+                <div class="row">
+                    <div class="col-md-6">
+                        <p><strong>Author:</strong> {{ agent.author }}</p>
+                        <p><strong>Version:</strong> {{ agent.version }}</p>
+                        <p><strong>Uploaded:</strong> {{ agent.uploaded_at.strftime('%Y-%m-%d %H:%M') if agent.uploaded_at else 'Unknown' }}</p>
+                    </div>
+                    <div class="col-md-6">
+                        <p><strong>Games Played:</strong> {{ agent.games_played }}</p>
+                        <p><strong>Games Won:</strong> {{ agent.games_won }}</p>
+                        <p><strong>Win Rate:</strong> <span class="win-rate">{{ "%.1f"|format(agent.win_rate) }}%</span></p>
+                        <p><strong>ELO Rating:</strong> <span class="badge bg-primary">{{ agent.elo_rating }}</span></p>
+                    </div>
+                </div>
+                
+                {% if agent.description %}
+                <div class="mt-3">
+                    <h6>Description</h6>
+                    <p class="text-muted">{{ agent.description }}</p>
+                </div>
+                {% endif %}
+                
+                {% if not agent.is_valid and agent.validation_error %}
+                <div class="mt-3">
+                    <h6 class="text-danger">Validation Error</h6>
+                    <div class="alert alert-danger">
+                        {{ agent.validation_error }}
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-history"></i> Recent Games</h5>
+            </div>
+            <div class="card-body">
+                {% if recent_games %}
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Opponent</th>
+                                    <th>Role</th>
+                                    <th>Result</th>
+                                    <th>Moves</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for game in recent_games %}
+                                <tr>
+                                    <td>{{ game.completed_at.strftime('%m-%d %H:%M') if game.completed_at else 'In progress' }}</td>
+                                    <td>
+                                        {% if game.black_agent_id == agent.id %}
+                                            <a href="{{ url_for('agent_detail', agent_id=game.white_agent_id) }}">
+                                                {{ game.white_agent.name }}
+                                            </a>
+                                        {% else %}
+                                            <a href="{{ url_for('agent_detail', agent_id=game.black_agent_id) }}">
+                                                {{ game.black_agent.name }}
+                                            </a>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if game.black_agent_id == agent.id %}
+                                            <i class="fas fa-circle text-dark"></i> Black
+                                        {% else %}
+                                            <i class="far fa-circle text-secondary"></i> White
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if game.result == 'black_wins' %}
+                                            {% if game.black_agent_id == agent.id %}
+                                                <span class="text-success"><i class="fas fa-trophy"></i> Won</span>
+                                            {% else %}
+                                                <span class="text-danger"><i class="fas fa-times"></i> Lost</span>
+                                            {% endif %}
+                                        {% elif game.result == 'white_wins' %}
+                                            {% if game.white_agent_id == agent.id %}
+                                                <span class="text-success"><i class="fas fa-trophy"></i> Won</span>
+                                            {% else %}
+                                                <span class="text-danger"><i class="fas fa-times"></i> Lost</span>
+                                            {% endif %}
+                                        {% elif game.result == 'draw' %}
+                                            <span class="text-warning"><i class="fas fa-equals"></i> Draw</span>
+                                        {% else %}
+                                            <span class="text-muted"><i class="fas fa-exclamation-triangle"></i> Error</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ game.move_count }}</td>
+                                    <td>
+                                        <a href="{{ url_for('game_detail', game_id=game.id) }}" class="btn btn-sm btn-outline-primary">
+                                            <i class="fas fa-eye"></i> View
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <p class="text-muted">No games played yet.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-chart-bar"></i> Statistics</h5>
+            </div>
+            <div class="card-body">
+                {% if agent.games_played > 0 %}
+                    <div class="mb-3">
+                        <h6>Win Rate</h6>
+                        <div class="progress">
+                            <div class="progress-bar bg-success" role="progressbar" style="width: {{ agent.win_rate }}%">
+                                {{ "%.1f"|format(agent.win_rate) }}%
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <h6>Performance</h6>
+                        <div class="d-flex justify-content-between">
+                            <span>Games Won:</span>
+                            <span class="text-success">{{ agent.games_won }}</span>
+                        </div>
+                        <div class="d-flex justify-content-between">
+                            <span>Games Lost:</span>
+                            <span class="text-danger">{{ agent.games_played - agent.games_won }}</span>
+                        </div>
+                        <div class="d-flex justify-content-between">
+                            <span>Total Games:</span>
+                            <span>{{ agent.games_played }}</span>
+                        </div>
+                    </div>
+                    
+                    <div class="text-center">
+                        <h4 class="text-primary">{{ agent.elo_rating }}</h4>
+                        <small class="text-muted">ELO Rating</small>
+                    </div>
+                {% else %}
+                    <p class="text-muted text-center">
+                        <i class="fas fa-chart-bar fa-3x mb-3 d-block"></i>
+                        No games played yet
+                    </p>
+                {% endif %}
+            </div>
+        </div>
+        
+        {% if agent.is_valid %}
+        <div class="card mt-3">
+            <div class="card-body text-center">
+                <h6><i class="fas fa-play"></i> Quick Actions</h6>
+                <p class="small text-muted">This agent is ready to compete in tournaments</p>
+                <form method="POST" action="{{ url_for('create_tournament') }}">
+                    <button type="submit" class="btn btn-primary btn-sm">
+                        <i class="fas fa-trophy"></i> Start Tournament
+                    </button>
+                </form>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

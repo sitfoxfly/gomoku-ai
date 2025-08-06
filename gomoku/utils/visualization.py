@@ -40,7 +40,7 @@ class BoardFormatter(ABC):
 class SimpleBoardFormatter(BoardFormatter):
     """Simple text-based board formatter."""
     
-    def __init__(self, board_size: int):
+    def __init__(self, board_size: int = 8):
         self.board_size = board_size
     
     def format_board(self, state: GameState) -> str:
@@ -82,7 +82,7 @@ class SimpleBoardFormatter(BoardFormatter):
 class ColorBoardFormatter(BoardFormatter):
     """Color-enhanced board formatter with ANSI colors."""
     
-    def __init__(self, board_size: int):
+    def __init__(self, board_size: int = 8):
         self.board_size = board_size
         # ANSI color codes
         self.RED = "\033[91m"
