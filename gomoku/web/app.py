@@ -216,11 +216,11 @@ def create_app(config=None):
             tournament_name = request.form.get('tournament_name', '').strip()
             
             if not selected_agent_ids:
-                flash('Please select at least 2 agents for the tournament.', 'error')
+                flash('Please select exactly 2 agents for the tournament.', 'error')
                 return redirect(url_for('new_tournament'))
             
-            if len(selected_agent_ids) < 2:
-                flash('A tournament requires at least 2 agents.', 'error')
+            if len(selected_agent_ids) != 2:
+                flash('Tournament is restricted to exactly 2 agents.', 'error')
                 return redirect(url_for('new_tournament'))
             
             # Convert to integers

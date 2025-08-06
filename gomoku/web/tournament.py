@@ -330,6 +330,8 @@ class TournamentRunner:
         tournament = Tournament(name=name)
 
         if selected_agent_ids:
+            if len(selected_agent_ids) != 2:
+                raise ValueError("Tournament is restricted to exactly 2 agents")
             tournament.set_selected_agent_ids(selected_agent_ids)
 
         db.session.add(tournament)

@@ -14,7 +14,7 @@
         </nav>
 
         <h1><i class="fas fa-plus-circle"></i> Create New Tournament</h1>
-        <p class="lead">Select agents to participate in a round-robin tournament</p>
+        <p class="lead">Select exactly 2 agents to compete in a head-to-head tournament</p>
     </div>
 </div>
 
@@ -23,16 +23,13 @@
         <div class="col-md-8">
             <div class="card">
                 <div class="card-header">
-                    <h5><i class="fas fa-users"></i> Select Agents</h5>
+                    <h5><i class="fas fa-users"></i> Select Exactly 2 Agents</h5>
                 </div>
                 <div class="card-body">
                     {% if agents %}
                     <div class="mb-3">
-                        <div class="form-check">
-                            <input class="form-check-input" type="checkbox" id="select_all">
-                            <label class="form-check-label fw-bold" for="select_all">
-                                Select All ({{ agents|length }} agents)
-                            </label>
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle"></i> Please select exactly 2 agents for the tournament.
                         </div>
                     </div>
                     
@@ -143,7 +140,6 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    const selectAllCheckbox = document.getElementById('select_all');
     const agentCheckboxes = document.querySelectorAll('.agent-checkbox');
     const startButton = document.getElementById('start_tournament');
     const tournamentInfo = document.getElementById('tournament_info');
@@ -152,12 +148,11 @@ document.addEventListener('DOMContentLoaded', function() {
     
     function updateTournamentInfo() {
         const selectedCount = document.querySelectorAll('.agent-checkbox:checked').length;
-        const totalGames = selectedCount >= 2 ? selectedCount * (selectedCount - 1) : 0;
         
         selectedCountElement.textContent = `${selectedCount} agents selected`;
-        totalGamesElement.textContent = `${totalGames} total games`;
+        totalGamesElement.textContent = `${selectedCount === 2 ? 2 : 0} total games`;
         
-        if (selectedCount >= 2) {
+        if (selectedCount === 2) {
             startButton.disabled = false;
             tournamentInfo.style.display = 'block';
             tournamentInfo.className = 'alert alert-success';
@@ -166,36 +161,30 @@ document.addEventListener('DOMContentLoaded', function() {
             if (selectedCount > 0) {
                 tournamentInfo.style.display = 'block';
                 tournamentInfo.className = 'alert alert-warning';
-                selectedCountElement.textContent += ' (minimum 2 required)';
+                if (selectedCount === 1) {
+                    selectedCountElement.textContent += ' (select 1 more agent)';
+                } else if (selectedCount > 2) {
+                    selectedCountElement.textContent += ' (too many selected, limit is 2)';
+                }
             } else {
                 tournamentInfo.style.display = 'none';
             }
         }
-        
-        // Update select all checkbox
-        if (selectedCount === agentCheckboxes.length) {
-            selectAllCheckbox.checked = true;
-            selectAllCheckbox.indeterminate = false;
-        } else if (selectedCount > 0) {
-            selectAllCheckbox.checked = false;
-            selectAllCheckbox.indeterminate = true;
-        } else {
-            selectAllCheckbox.checked = false;
-            selectAllCheckbox.indeterminate = false;
-        }
     }
     
-    // Select all functionality
-    selectAllCheckbox.addEventListener('change', function() {
-        agentCheckboxes.forEach(checkbox => {
-            checkbox.checked = this.checked;
-        });
-        updateTournamentInfo();
-    });
-    
-    // Individual checkbox functionality
+    // Individual checkbox functionality with 2-agent limit enforcement
     agentCheckboxes.forEach(checkbox => {
-        checkbox.addEventListener('change', updateTournamentInfo);
+        checkbox.addEventListener('change', function() {
+            const selectedCount = document.querySelectorAll('.agent-checkbox:checked').length;
+            
+            // If trying to select more than 2, prevent the selection
+            if (this.checked && selectedCount > 2) {
+                this.checked = false;
+                return;
+            }
+            
+            updateTournamentInfo();
+        });
     });
     
     // Make card clickable
@@ -203,6 +192,13 @@ document.addEventListener('DOMContentLoaded', function() {
         card.addEventListener('click', function(e) {
             if (e.target.type !== 'checkbox') {
                 const checkbox = card.querySelector('.agent-checkbox');
+                const selectedCount = document.querySelectorAll('.agent-checkbox:checked').length;
+                
+                // If trying to select more than 2, prevent the selection
+                if (!checkbox.checked && selectedCount >= 2) {
+                    return;
+                }
+                
                 checkbox.checked = !checkbox.checked;
                 updateTournamentInfo();
             }
