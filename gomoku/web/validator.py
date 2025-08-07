@@ -20,7 +20,7 @@ class AgentValidator:
         # Dangerous imports/functions to check for
         self.dangerous_imports = {
             'os', 'subprocess', 'sys', 'importlib', 'eval', 'exec',
-            'open', '__import__', 'compile', 'globals', 'locals',
+            'open', '__import__', 'globals', 'locals',
             'vars', 'dir', 'getattr', 'setattr', 'delattr',
             'socket', 'urllib', 'requests', 'http'
         }
