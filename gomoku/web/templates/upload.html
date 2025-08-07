@@ -34,14 +34,14 @@
                         <div class="col-md-6">
                             <div class="mb-3">
                                 <label for="version" class="form-label">Version</label>
-                                <input type="text" class="form-control" id="version" name="version" 
+                                <input type="text" class="form-control" id="version" name="version"
                                        value="1.0.0" placeholder="1.0.0">
                             </div>
                         </div>
                         <div class="col-md-6">
                             <div class="mb-3">
                                 <label for="class_name" class="form-label">Agent Class Name</label>
-                                <input type="text" class="form-control" id="class_name" name="class_name" 
+                                <input type="text" class="form-control" id="class_name" name="class_name"
                                        value="Agent" placeholder="Agent">
                                 <div class="form-text">Name of your agent class in the Python file</div>
                             </div>
@@ -50,7 +50,7 @@
 
                     <div class="mb-3">
                         <label for="agent_file" class="form-label">Agent Python File *</label>
-                        <input type="file" class="form-control" id="agent_file" name="agent_file" 
+                        <input type="file" class="form-control" id="agent_file" name="agent_file"
                                accept=".py" required>
                         <div class="form-text">
                             Upload your Python file containing the agent implementation
@@ -64,7 +64,7 @@
                             <li>Implement the <code>async def get_move(self, game_state: GameState) -> Tuple[int, int]</code> method</li>
                             <li>Return valid board coordinates as a tuple</li>
                             <li>Avoid dangerous operations (file I/O, network, system calls)</li>
-                            <li>Keep move calculation under 10 seconds</li>
+                            <li>Keep move calculation under 20 seconds</li>
                         </ul>
                     </div>
 
@@ -88,20 +88,20 @@ import random
 
 class MyAgent(Agent):
     """My custom Gomoku agent."""
-    
+
     async def get_move(self, game_state: GameState) -> Tuple[int, int]:
         """
         Choose the next move for this agent.
-        
+
         Args:
             game_state: Current game state with board and move history
-            
+
         Returns:
             Tuple of (row, col) coordinates for the next move
         """
         # Get all legal moves
         legal_moves = game_state.get_legal_moves()
-        
+
         # Choose a random legal move
         return random.choice(legal_moves)</code></pre>
                 </div>
