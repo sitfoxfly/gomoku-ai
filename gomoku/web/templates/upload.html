@@ -62,7 +62,7 @@
                         <ul class="mb-0">
                             <li>Your Python file must contain a class that inherits from <code>Agent</code></li>
                             <li>Implement the <code>async def get_move(self, game_state: GameState) -> Tuple[int, int]</code> method</li>
-                            <li>Return valid board coordinates (0-14) as a tuple</li>
+                            <li>Return valid board coordinates as a tuple</li>
                             <li>Avoid dangerous operations (file I/O, network, system calls)</li>
                             <li>Keep move calculation under 10 seconds</li>
                         </ul>
@@ -99,15 +99,11 @@ class MyAgent(Agent):
         Returns:
             Tuple of (row, col) coordinates for the next move
         """
-        # Find all empty positions
-        empty_positions = []
-        for row in range(15):
-            for col in range(15):
-                if game_state.board[row][col] == '.':
-                    empty_positions.append((row, col))
+        # Get all legal moves
+        legal_moves = game_state.get_legal_moves()
         
-        # Choose a random empty position
-        return random.choice(empty_positions)</code></pre>
+        # Choose a random legal move
+        return random.choice(legal_moves)</code></pre>
                 </div>
             </div>
         </div>
