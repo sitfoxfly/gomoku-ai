@@ -2,9 +2,8 @@
 
 import ast
 import json
-import importlib.util
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple, Any
+from typing import Dict, Optional, Tuple, Any
 
 from ..agents.base import Agent
 from ..core.models import Player, GameState
@@ -13,20 +12,34 @@ from ..core.models import Player, GameState
 class AgentValidator:
     """Validates uploaded agents for security and functionality."""
 
+    # Dangerous imports/functions to check for
+    _DANGEROUS_IMPORTS = {
+        'os', 'subprocess', 'sys', 'importlib', 'eval', 'exec',
+        'open', '__import__', 'globals', 'locals',
+        'vars', 'dir', 'getattr', 'setattr', 'delattr',
+        'socket', 'urllib', 'requests', 'http'
+    }
+
+    # Dangerous direct function calls
+    _DANGEROUS_FUNCTIONS = {
+        '__import__', 'exec', 'eval', 'compile', 'open', 'file',
+        'input', 'raw_input'
+    }
+
+    # Dangerous module operations
+    _DANGEROUS_OPERATIONS = {
+        'os': ['remove', 'unlink', 'rmdir', 'system', 'popen', 'open'],
+        'shutil': ['rmtree', 'move', 'copy'],
+        'pathlib': ['unlink', 'rmdir'],
+        'subprocess': ['call', 'run', 'Popen', 'check_call', 'check_output']
+    }
+
+    # Required files for a valid agent
+    _REQUIRED_FILES = ['agent.json']
+
     def __init__(self, upload_dir: str = "uploads"):
         self.upload_dir = Path(upload_dir)
         self.upload_dir.mkdir(exist_ok=True)
-
-        # Dangerous imports/functions to check for
-        self.dangerous_imports = {
-            'os', 'subprocess', 'sys', 'importlib', 'eval', 'exec',
-            'open', '__import__', 'globals', 'locals',
-            'vars', 'dir', 'getattr', 'setattr', 'delattr',
-            'socket', 'urllib', 'requests', 'http'
-        }
-
-        # Required files for a valid agent
-        self.required_files = ['agent.json']
 
     def validate_agent(self, agent_dir: str) -> Tuple[bool, Optional[str]]:
         """
@@ -70,7 +83,7 @@ class AgentValidator:
 
     def _check_required_files(self, agent_path: Path) -> Optional[str]:
         """Check that all required files are present."""
-        for required_file in self.required_files:
+        for required_file in self._REQUIRED_FILES:
             file_path = agent_path / required_file
             if not file_path.exists():
                 return f"Missing required file: {required_file}"
@@ -141,7 +154,7 @@ class AgentValidator:
                 return f"Syntax error in agent.py: {str(e)}"
 
             # Security checks
-            security_error = self._check_security_issues(tree, code)
+            security_error = self._check_security_issues(tree)
             if security_error:
                 return security_error
 
@@ -150,40 +163,85 @@ class AgentValidator:
         except Exception as e:
             return f"Error validating Python code: {str(e)}"
 
-    def _check_security_issues(self, tree: ast.AST, code: str) -> Optional[str]:
-        """Check for potentially dangerous code patterns."""
+    def _check_security_issues(self, tree: ast.AST) -> Optional[str]:
+        """Check for potentially dangerous code patterns using AST analysis."""
 
-        # Check for dangerous imports
         for node in ast.walk(tree):
+            # Check imports
             if isinstance(node, ast.Import):
-                for alias in node.names:
-                    if alias.name in self.dangerous_imports:
-                        return f"Dangerous import detected: {alias.name}"
+                error = self._check_import_node(node)
+                if error:
+                    return error
 
             elif isinstance(node, ast.ImportFrom):
-                if node.module and node.module in self.dangerous_imports:
-                    return f"Dangerous import detected: {node.module}"
+                error = self._check_import_from_node(node)
+                if error:
+                    return error
 
-                for alias in node.names:
-                    if alias.name in self.dangerous_imports:
-                        return f"Dangerous import detected: {alias.name}"
-
-            # Check for dangerous function calls
+            # Check function calls
             elif isinstance(node, ast.Call):
-                if isinstance(node.func, ast.Name):
-                    if node.func.id in self.dangerous_imports:
-                        return f"Dangerous function call: {node.func.id}"
+                error = self._check_function_call_node(node)
+                if error:
+                    return error
 
-        # Simple string checks for additional patterns
-        dangerous_patterns = [
-            '__import__', 'exec(', 'eval(', 'compile(',
-            'subprocess.', 'os.system', 'os.popen',
-            'open(', 'file(', 'input(', 'raw_input('
-        ]
+        return None
 
-        for pattern in dangerous_patterns:
-            if pattern in code:
-                return f"Potentially dangerous code pattern detected: {pattern}"
+    def _check_import_node(self, node: ast.Import) -> Optional[str]:
+        """Check ast.Import nodes for dangerous imports."""
+        for alias in node.names:
+            if alias.name in self._DANGEROUS_IMPORTS:
+                return f"Dangerous import detected: {alias.name}"
+        return None
+
+    def _check_import_from_node(self, node: ast.ImportFrom) -> Optional[str]:
+        """Check ast.ImportFrom nodes for dangerous imports."""
+        if node.module and node.module in self._DANGEROUS_IMPORTS:
+            return f"Dangerous import detected: {node.module}"
+
+        for alias in node.names:
+            if alias.name in self._DANGEROUS_IMPORTS:
+                return f"Dangerous import detected: {alias.name}"
+        return None
+
+    def _check_function_call_node(self, node: ast.Call) -> Optional[str]:
+        """Check ast.Call nodes for dangerous function calls."""
+        # Direct function calls (e.g., exec(), eval())
+        if isinstance(node.func, ast.Name):
+            return self._check_direct_function_call(node.func.id)
+
+        # Attribute access calls (e.g., os.system(), Path.unlink())
+        elif isinstance(node.func, ast.Attribute):
+            return self._check_attribute_function_call(node.func)
+
+        return None
+
+    def _check_direct_function_call(self, func_name: str) -> Optional[str]:
+        """Check direct function calls for dangerous patterns."""
+        if func_name in self._DANGEROUS_FUNCTIONS:
+            return f"Dangerous function call: {func_name}"
+
+        return None
+
+    def _check_attribute_function_call(self, func_node: ast.Attribute) -> Optional[str]:
+        """Check attribute-based function calls for dangerous patterns."""
+        # Handle module.function patterns (e.g., os.remove, shutil.rmtree)
+        if isinstance(func_node.value, ast.Name):
+            module_name = func_node.value.id
+            func_name = func_node.attr
+
+            if module_name in self._DANGEROUS_OPERATIONS:
+                if func_name in self._DANGEROUS_OPERATIONS[module_name]:
+                    return f"Dangerous operation detected: {module_name}.{func_name}"
+
+        # Handle chained attribute access (e.g., Path(...).unlink())
+        elif isinstance(func_node.value, ast.Attribute):
+            if func_node.attr in ['unlink', 'rmdir']:
+                return f"Dangerous file operation detected: .{func_node.attr}()"
+
+        # Handle method calls on objects that might be dangerous
+        # This catches patterns like: path_obj.unlink() where path_obj could be a Path
+        elif func_node.attr in ['unlink', 'rmdir', 'remove']:
+            return f"Potentially dangerous file operation: .{func_node.attr}()"
 
         return None
 
@@ -251,14 +309,15 @@ class AgentValidator:
                 import asyncio
 
                 async def test_move():
+                    timeout_seconds = 20.0
                     try:
                         move = await asyncio.wait_for(
                             agent.get_move(game_state),
-                            timeout=20.0
+                            timeout=timeout_seconds
                         )
                         return move
                     except asyncio.TimeoutError:
-                        raise Exception("Agent took too long to make a move (>5 seconds)")
+                        raise Exception(f"Agent took too long to make a move (>{timeout_seconds} seconds)")
 
                 # Run the async test
                 loop = asyncio.new_event_loop()
@@ -304,8 +363,9 @@ class AgentValidator:
 
             # Generate hash-based filename for the Python file
             if 'agent_file' in files:
-                file_content = files['agent_file'].read()
-                files['agent_file'].seek(0)  # Reset file pointer for saving
+                agent_file = files['agent_file']
+                file_content = agent_file.read()
+                agent_file.seek(0)  # Reset file pointer for saving
 
                 # Create salt from timestamp, author, and agent name for better uniqueness
                 import time
@@ -335,7 +395,7 @@ class AgentValidator:
                 json.dump(agent_json, f, indent=2)
 
             # Save uploaded Python file with hash-based name
-            files['agent_file'].save(agent_dir / python_filename)
+            agent_file.save(agent_dir / python_filename)
 
             return True, str(agent_dir)
 
