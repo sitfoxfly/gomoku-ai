@@ -14,9 +14,9 @@
     </div>
 </div>
 
-{% if tournaments %}
+{% if tournaments.items %}
 <div class="row">
-    {% for tournament in tournaments %}
+    {% for tournament in tournaments.items %}
     <div class="col-md-6 mb-4">
         <div class="card">
             <div class="card-body">
@@ -109,6 +109,73 @@
 </div>
 {% endif %}
 
+{# Pagination controls #}
+{% if tournaments.items and tournaments.pages > 1 %}
+<div class="row mt-4">
+    <div class="col-md-12">
+        <nav aria-label="Tournament pagination">
+            <ul class="pagination justify-content-center">
+                {# Previous page #}
+                {% if tournaments.has_prev %}
+                    <li class="page-item">
+                        <a class="page-link" href="{{ url_for('tournaments_list', page=tournaments.prev_num) }}" aria-label="Previous">
+                            <span aria-hidden="true">&laquo;</span>
+                        </a>
+                    </li>
+                {% else %}
+                    <li class="page-item disabled">
+                        <span class="page-link" aria-label="Previous">
+                            <span aria-hidden="true">&laquo;</span>
+                        </span>
+                    </li>
+                {% endif %}
+
+                {# Page numbers #}
+                {% for page_num in tournaments.iter_pages(left_edge=1, right_edge=1, left_current=1, right_current=2) %}
+                    {% if page_num %}
+                        {% if page_num != tournaments.page %}
+                            <li class="page-item">
+                                <a class="page-link" href="{{ url_for('tournaments_list', page=page_num) }}">{{ page_num }}</a>
+                            </li>
+                        {% else %}
+                            <li class="page-item active" aria-current="page">
+                                <span class="page-link">{{ page_num }}</span>
+                            </li>
+                        {% endif %}
+                    {% else %}
+                        <li class="page-item disabled">
+                            <span class="page-link">…</span>
+                        </li>
+                    {% endif %}
+                {% endfor %}
+
+                {# Next page #}
+                {% if tournaments.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="{{ url_for('tournaments_list', page=tournaments.next_num) }}" aria-label="Next">
+                            <span aria-hidden="true">&raquo;</span>
+                        </a>
+                    </li>
+                {% else %}
+                    <li class="page-item disabled">
+                        <span class="page-link" aria-label="Next">
+                            <span aria-hidden="true">&raquo;</span>
+                        </span>
+                    </li>
+                {% endif %}
+            </ul>
+        </nav>
+        
+        {# Pagination info #}
+        <div class="text-center text-muted small mt-2">
+            Showing {{ tournaments.per_page * (tournaments.page - 1) + 1 }} to 
+            {{ tournaments.per_page * (tournaments.page - 1) + tournaments.items|length }} 
+            of {{ tournaments.total }} tournaments
+        </div>
+    </div>
+</div>
+{% endif %}
+
 <div class="row mt-4">
     <div class="col-md-12">
         <div class="card bg-light">
@@ -135,7 +202,7 @@
 {% endblock %}
 
 {% block scripts %}
-{% if tournaments and tournaments|selectattr('status', 'equalto', 'running')|list %}
+{% if tournaments.items and tournaments.items|selectattr('status', 'equalto', 'running')|list %}
 <script>
 // Auto-refresh page every 30 seconds if there are running tournaments
 setTimeout(function() {

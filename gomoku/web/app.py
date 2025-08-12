@@ -190,8 +190,15 @@ def create_app(config=None):
     
     @app.route('/tournaments')
     def tournaments_list():
-        """List all tournaments."""
-        tournaments = Tournament.query.order_by(Tournament.created_at.desc()).all()
+        """List all tournaments with pagination."""
+        page = request.args.get('page', 1, type=int)
+        per_page = 12  # 6 tournaments per row, 2 rows per page
+        
+        tournaments = Tournament.query.order_by(Tournament.created_at.desc()).paginate(
+            page=page, 
+            per_page=per_page,
+            error_out=False
+        )
         return render_template('tournaments.html', tournaments=tournaments)
     
     @app.route('/tournaments/new')
