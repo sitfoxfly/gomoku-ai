@@ -98,7 +98,9 @@ class JSONToHTMLConverter:
                 board_states.append([row[:] for row in current_board])
             else:
                 row, col = move['position']
-                piece = 'X' if 'Black' in move['player'] or move['move_number'] % 2 == 1 else 'O'
+                # Determine piece based on move number: odd moves are BLACK (X), even moves are WHITE (O)
+                # Move numbers start at 1, so move 1 (odd) = BLACK/X, move 2 (even) = WHITE/O
+                piece = 'X' if move['move_number'] % 2 == 1 else 'O'
                 current_board[row][col] = piece
                 board_states.append([row[:] for row in current_board])
         
@@ -422,7 +424,8 @@ class JSONToHTMLConverter:
         
         # Add move history
         for i, move in enumerate(moves):
-            player_symbol = 'X' if 'Black' in move['player'] or (i + 1) % 2 == 1 else 'O'
+            # Determine player symbol based on move number: odd moves are BLACK (X), even moves are WHITE (O)
+            player_symbol = 'X' if move['move_number'] % 2 == 1 else 'O'
             illegal_class = " illegal" if move.get('illegal', False) else ""
             
             if move.get('illegal', False):
