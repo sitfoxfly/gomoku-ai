@@ -14,10 +14,43 @@
     </div>
 </div>
 
+{# Search and Filter Section #}
 {% if agents %}
-<div class="row">
+<div class="row mb-4">
+    <div class="col-md-8">
+        <div class="input-group">
+            <span class="input-group-text"><i class="fas fa-search"></i></span>
+            <input type="text" id="agentSearch" class="form-control" placeholder="Search by name, author, or description...">
+        </div>
+    </div>
+    <div class="col-md-4">
+        <select id="statusFilter" class="form-select">
+            <option value="all">All Agents</option>
+            <option value="valid">Valid Only</option>
+            <option value="invalid">Invalid Only</option>
+        </select>
+    </div>
+</div>
+
+{# Search Results Info #}
+<div class="row mb-3">
+    <div class="col-md-12">
+        <div id="searchInfo" class="text-muted small" style="display: none;">
+            <i class="fas fa-info-circle"></i> 
+            Showing <span id="visibleCount">0</span> of <span id="totalCount">{{ agents|length }}</span> agents
+        </div>
+    </div>
+</div>
+{% endif %}
+
+{% if agents %}
+<div class="row" id="agentsContainer">
     {% for agent in agents %}
-    <div class="col-md-6 col-lg-4 mb-4">
+    <div class="col-md-6 col-lg-4 mb-4 agent-item" 
+         data-name="{{ agent.name|lower }}" 
+         data-author="{{ agent.author|lower }}" 
+         data-description="{{ agent.description|lower if agent.description else '' }}"
+         data-status="{{ 'valid' if agent.is_valid else 'invalid' }}">
         <div class="card agent-card h-100">
             <div class="card-body">
                 <div class="d-flex justify-content-between align-items-start mb-2">
@@ -120,5 +153,129 @@ var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggl
 var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
     return new bootstrap.Tooltip(tooltipTriggerEl)
 })
+
+// Agent Search and Filter Functionality
+class AgentSearchFilter {
+    constructor() {
+        this.searchInput = document.getElementById('agentSearch');
+        this.statusFilter = document.getElementById('statusFilter');
+        this.agentItems = document.querySelectorAll('.agent-item');
+        this.searchInfo = document.getElementById('searchInfo');
+        this.visibleCount = document.getElementById('visibleCount');
+        this.totalCount = document.getElementById('totalCount');
+        
+        if (this.searchInput && this.statusFilter) {
+            this.init();
+        }
+    }
+    
+    init() {
+        // Add event listeners
+        this.searchInput.addEventListener('input', () => this.filterAgents());
+        this.statusFilter.addEventListener('change', () => this.filterAgents());
+        
+        // Initial count
+        this.updateSearchInfo();
+    }
+    
+    filterAgents() {
+        const searchTerm = this.searchInput.value.toLowerCase().trim();
+        const statusFilter = this.statusFilter.value;
+        
+        let visibleCount = 0;
+        
+        this.agentItems.forEach(item => {
+            let shouldShow = true;
+            
+            // Apply search filter
+            if (searchTerm) {
+                const name = item.getAttribute('data-name');
+                const author = item.getAttribute('data-author');
+                const description = item.getAttribute('data-description');
+                
+                const matchesSearch = name.includes(searchTerm) || 
+                                    author.includes(searchTerm) || 
+                                    description.includes(searchTerm);
+                
+                if (!matchesSearch) {
+                    shouldShow = false;
+                }
+            }
+            
+            // Apply status filter
+            if (statusFilter !== 'all') {
+                const status = item.getAttribute('data-status');
+                if (status !== statusFilter) {
+                    shouldShow = false;
+                }
+            }
+            
+            // Show/hide the agent card
+            if (shouldShow) {
+                item.style.display = '';
+                visibleCount++;
+            } else {
+                item.style.display = 'none';
+            }
+        });
+        
+        // Update search info
+        this.updateSearchInfo(visibleCount);
+        
+        // Show "no results" message if needed
+        this.toggleNoResultsMessage(visibleCount === 0 && (searchTerm || statusFilter !== 'all'));
+    }
+    
+    updateSearchInfo(visibleCount = null) {
+        if (visibleCount === null) {
+            visibleCount = this.agentItems.length;
+        }
+        
+        this.visibleCount.textContent = visibleCount;
+        
+        // Show search info if filtering is active
+        const isFiltering = this.searchInput.value.trim() || this.statusFilter.value !== 'all';
+        if (isFiltering) {
+            this.searchInfo.style.display = '';
+        } else {
+            this.searchInfo.style.display = 'none';
+        }
+    }
+    
+    toggleNoResultsMessage(show) {
+        let noResultsMsg = document.getElementById('noResultsMessage');
+        
+        if (show && !noResultsMsg) {
+            // Create no results message
+            noResultsMsg = document.createElement('div');
+            noResultsMsg.id = 'noResultsMessage';
+            noResultsMsg.className = 'col-12 text-center py-5';
+            noResultsMsg.innerHTML = `
+                <i class="fas fa-search fa-3x text-muted mb-3"></i>
+                <h4>No agents found</h4>
+                <p class="text-muted">Try adjusting your search terms or filters</p>
+                <button class="btn btn-outline-primary" onclick="agentSearchFilter.clearSearch()">
+                    <i class="fas fa-times"></i> Clear Search
+                </button>
+            `;
+            document.getElementById('agentsContainer').appendChild(noResultsMsg);
+        } else if (!show && noResultsMsg) {
+            // Remove no results message
+            noResultsMsg.remove();
+        }
+    }
+    
+    clearSearch() {
+        this.searchInput.value = '';
+        this.statusFilter.value = 'all';
+        this.filterAgents();
+        this.searchInput.focus();
+    }
+}
+
+// Initialize search filter when DOM is loaded
+document.addEventListener('DOMContentLoaded', function() {
+    window.agentSearchFilter = new AgentSearchFilter();
+});
 </script>
 {% endblock %}
