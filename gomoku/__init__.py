@@ -43,19 +43,17 @@ from .utils import BoardFormatter, ColorBoardFormatter, SimpleBoardFormatter
 __all__ = [
     # Core classes
     'Player', 'Move', 'GameState', 'GameResult', 'GomokuGame',
-    
+
     # Agents
     'Agent', 'LLMGomokuAgent', 'SimpleGomokuAgent',
-    
-    # Strategies  
-    'StandardStrategy', 'AggressiveStrategy',
-    
-    # Arena 
+
+
+    # Arena
     'GomokuArena',
-    
+
     # LLM clients
     'OpenAIGomokuClient',
-    
+
     # Utilities
     'BoardFormatter', 'ColorBoardFormatter', 'SimpleBoardFormatter',
 ]
