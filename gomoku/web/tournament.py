@@ -167,26 +167,75 @@ class TournamentRunner:
                 # Continue without HTML - not a fatal error
 
             # Determine winner and update stats
-            game_result = result.get('result')
-            if game_result == GameResult.BLACK_WIN.value:
+            game_result_str = result.get('result')
+            
+            # Convert string result to enum for safer comparison
+            try:
+                game_result = GameResult(game_result_str)
+            except ValueError:
+                # Unknown result type, treat as error
+                game.result = 'error'
+                game.error_message = f"Unknown game result: {game_result_str}"
+                db.session.commit()
+                return game
+            
+            if game_result == GameResult.BLACK_WIN:
                 game.result = 'black_wins'
                 game.winner_id = black_agent_id
                 black_agent_db.games_won += 1
-            elif game_result == GameResult.WHITE_WIN.value:
+            elif game_result == GameResult.WHITE_WIN:
                 game.result = 'white_wins'
                 game.winner_id = white_agent_id
                 white_agent_db.games_won += 1
-            elif game_result == GameResult.DRAW.value:
+            elif game_result == GameResult.DRAW:
                 game.result = 'draw'
                 # Both agents get a draw recorded
                 black_agent_db.games_drawn += 1
                 white_agent_db.games_drawn += 1
+            elif game_result == GameResult.TIMEOUT:
+                # Timeout counts as a loss for the agent that timed out
+                loser_id = result.get('loser')  # Arena returns loser agent ID
+                winner_id = result.get('winner')  # Arena returns winner agent ID
+                
+                if loser_id == black_agent_db.name:
+                    game.result = 'white_wins'
+                    game.winner_id = white_agent_id
+                    white_agent_db.games_won += 1
+                    game.error_message = f"Black agent ({black_agent_db.name}) timed out"
+                elif loser_id == white_agent_db.name:
+                    game.result = 'black_wins'
+                    game.winner_id = black_agent_id
+                    black_agent_db.games_won += 1
+                    game.error_message = f"White agent ({white_agent_db.name}) timed out"
+                else:
+                    # Fallback in case we can't determine which agent timed out
+                    game.result = 'error'
+                    game.error_message = result.get('reason', 'Timeout - could not determine which agent')
+            elif game_result == GameResult.INVALID_MOVE:
+                # Invalid move counts as a loss for the agent that made the invalid move
+                loser_id = result.get('loser')  # Arena returns loser agent ID
+                winner_id = result.get('winner')  # Arena returns winner agent ID
+                
+                if loser_id == black_agent_db.name:
+                    game.result = 'white_wins'
+                    game.winner_id = white_agent_id
+                    white_agent_db.games_won += 1
+                    game.error_message = f"Black agent ({black_agent_db.name}) made invalid move"
+                elif loser_id == white_agent_db.name:
+                    game.result = 'black_wins'
+                    game.winner_id = black_agent_id
+                    black_agent_db.games_won += 1
+                    game.error_message = f"White agent ({white_agent_db.name}) made invalid move"
+                else:
+                    # Fallback in case we can't determine which agent made invalid move
+                    game.result = 'error'
+                    game.error_message = result.get('reason', 'Invalid move - could not determine which agent')
             else:
                 game.result = 'error'
                 game.error_message = result.get('reason', 'Unknown error')
 
             # Update game counts (only increment for completed games, not errors)
-            if game_result in [GameResult.BLACK_WIN.value, GameResult.WHITE_WIN.value, GameResult.DRAW.value]:
+            if game_result in [GameResult.BLACK_WIN, GameResult.WHITE_WIN, GameResult.DRAW, GameResult.TIMEOUT, GameResult.INVALID_MOVE]:
                 black_agent_db.games_played += 1
                 white_agent_db.games_played += 1
 

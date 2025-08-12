@@ -204,13 +204,6 @@ def create_app(config=None):
     def create_tournament():
         """Create and queue a new tournament."""
         try:
-            # Check if another tournament is already running (single tournament constraint)
-            active_job = job_manager.get_active_tournament_job()
-            if active_job:
-                active_tournament = Tournament.query.get(active_job.tournament_id)
-                flash(f'Cannot create tournament: "{active_tournament.name}" is already running. Please wait for it to complete.', 'warning')
-                return redirect(url_for('new_tournament'))
-            
             # Get selected agents from form
             selected_agent_ids = request.form.getlist('selected_agents')
             tournament_name = request.form.get('tournament_name', '').strip()
