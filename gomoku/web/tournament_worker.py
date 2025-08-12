@@ -50,6 +50,10 @@ class TournamentWorker:
         self.current_job = None
         self.job_manager = JobManager()
         
+        # Heartbeat thread
+        self.heartbeat_running = False
+        self.heartbeat_thread = None
+        
         # Async resources
         self.event_loop = None
         self._async_cleanup_registered = False
@@ -75,6 +79,7 @@ class TournamentWorker:
         """Handle shutdown signals gracefully."""
         logger.info(f"Received signal {signum}, shutting down gracefully...")
         self.running = False
+        self.heartbeat_running = False
         self._cleanup_async_resources()
     
     def start(self):
@@ -93,6 +98,9 @@ class TournamentWorker:
                 # Register worker in database
                 self._register_worker()
                 
+                # Start heartbeat thread
+                self._start_heartbeat_thread()
+                
                 # Main work loop
                 self._work_loop()
                 
@@ -102,6 +110,7 @@ class TournamentWorker:
             sys.exit(1)
         finally:
             # Cleanup on shutdown
+            self._stop_heartbeat_thread()
             self._cleanup_async_resources()
             try:
                 with app.app_context():
