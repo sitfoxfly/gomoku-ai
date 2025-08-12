@@ -231,11 +231,16 @@ class TournamentWorker:
         """Worker function for heartbeat thread."""
         heartbeat_interval = 30  # 30 seconds
         
+        # Create Flask app context for this thread
+        from gomoku.web.app import create_app
+        app = create_app({'SQLALCHEMY_DATABASE_URI': self.db_url})
+        
         while self.heartbeat_running:
             try:
                 time.sleep(heartbeat_interval)
                 if self.heartbeat_running:
-                    self._update_heartbeat()
+                    with app.app_context():
+                        self._update_heartbeat()
                     
             except Exception as e:
                 logger.error(f"Error in heartbeat worker: {e}")
