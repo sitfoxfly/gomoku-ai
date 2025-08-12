@@ -17,7 +17,7 @@ from typing import Optional
 # Add the project root to Python path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
-from gomoku.web.models import db, Agent, Tournament, TournamentJob, TournamentCheckpoint, WorkerProcess
+from gomoku.web.models import db, Agent, Tournament, TournamentJob, WorkerProcess, Game
 from gomoku.web.job_manager import JobManager
 from gomoku.arena.game_arena import GomokuArena
 from gomoku.core.models import GameResult
@@ -262,13 +262,13 @@ class TournamentWorker:
             tournament.started_at = datetime.utcnow()
             db.session.commit()
             
-            # Check for existing checkpoints (recovery)
-            checkpoint = self._get_latest_checkpoint(job.tournament_id)
-            if checkpoint:
-                logger.info(f"Found checkpoint for tournament {job.tournament_id}, attempting recovery")
-                success = self._resume_tournament_from_checkpoint(tournament, checkpoint)
+            # Check for existing games (database-based recovery)
+            existing_games = Game.query.filter_by(tournament_id=job.tournament_id).count()
+            if existing_games > 0:
+                logger.info(f"Found {existing_games} existing games for tournament {job.tournament_id}, resuming")
+                success = self._resume_tournament_from_database(tournament)
             else:
-                logger.info(f"No checkpoint found, starting tournament {job.tournament_id} from beginning")
+                logger.info(f"No existing games found, starting tournament {job.tournament_id} from beginning")
                 success = self._run_tournament_from_start(tournament)
             
             # Complete job
@@ -300,36 +300,11 @@ class TournamentWorker:
                 tournament.completed_at = datetime.utcnow()
                 db.session.commit()
     
-    def _get_latest_checkpoint(self, tournament_id: int) -> Optional[TournamentCheckpoint]:
-        """Get the latest checkpoint for a tournament."""
-        return (TournamentCheckpoint.query
-                .filter_by(tournament_id=tournament_id)
-                .order_by(TournamentCheckpoint.created_at.desc())
-                .first())
     
-    def _create_checkpoint(self, tournament_id: int, checkpoint_type: str, data: dict):
-        """Create a progress checkpoint."""
+    def _resume_tournament_from_database(self, tournament: Tournament) -> bool:
+        """Resume tournament execution using existing games from database."""
         try:
-            checkpoint = TournamentCheckpoint(
-                tournament_id=tournament_id,
-                checkpoint_type=checkpoint_type,
-                checkpoint_data=data
-            )
-            checkpoint.set_data(data)
-            
-            db.session.add(checkpoint)
-            db.session.commit()
-            
-            logger.debug(f"Created checkpoint {checkpoint_type} for tournament {tournament_id}")
-            
-        except Exception as e:
-            logger.error(f"Error creating checkpoint: {e}")
-    
-    def _resume_tournament_from_checkpoint(self, tournament: Tournament, checkpoint: TournamentCheckpoint) -> bool:
-        """Resume tournament execution from a checkpoint."""
-        try:
-            checkpoint_data = checkpoint.get_data()
-            logger.info(f"Resuming tournament {tournament.id} from checkpoint: {checkpoint.checkpoint_type}")
+            logger.info(f"Resuming tournament {tournament.id} from existing database games")
             
             # Get agents
             selected_agent_ids = tournament.get_selected_agent_ids()
@@ -342,18 +317,30 @@ class TournamentWorker:
                 logger.error(f"Not enough agents for tournament {tournament.id}")
                 return False
             
-            # Resume from checkpoint
-            completed_matchups = set(checkpoint_data.get('completed_matchups', []))
+            # Get existing completed games from database
+            existing_games = (Game.query
+                            .filter_by(tournament_id=tournament.id)
+                            .filter(Game.completed_at.isnot(None))
+                            .all())
+            
+            # Create set of completed matchups from database
+            completed_matchups = {(g.black_agent_id, g.white_agent_id) for g in existing_games}
+            
+            logger.info(f"Found {len(completed_matchups)} completed matchups from database")
+            
+            # Calculate tournament totals
+            total_matchups = len(agents) * (len(agents) - 1)  # Round-robin
+            tournament.total_games = total_matchups
+            tournament.completed_games = len(completed_matchups)
+            db.session.commit()
             
             # Run remaining matchups
-            total_matchups = len(agents) * (len(agents) - 1)  # Round-robin
-            
             for i, agent1 in enumerate(agents):
                 for j, agent2 in enumerate(agents):
                     if i != j:  # Don't play against self
-                        matchup_id = f"{agent1.id}_vs_{agent2.id}"
+                        matchup = (agent1.id, agent2.id)
                         
-                        if matchup_id in completed_matchups:
+                        if matchup in completed_matchups:
                             logger.debug(f"Skipping completed matchup: {agent1.name} vs {agent2.name}")
                             continue
                         
@@ -368,20 +355,11 @@ class TournamentWorker:
                             logger.error(f"Game failed: {agent1.name} vs {agent2.name}")
                             continue
                         
-                        # Add to completed matchups
-                        completed_matchups.add(matchup_id)
-                        
-                        # Update tournament progress
-                        tournament.completed_games = len(completed_matchups)
+                        # Update progress
+                        tournament.completed_games += 1
                         db.session.commit()
                         
-                        # Create checkpoint every 10 games
-                        if len(completed_matchups) % 10 == 0:
-                            self._create_checkpoint(tournament.id, 'games_progress', {
-                                'completed_matchups': list(completed_matchups),
-                                'total_matchups': total_matchups,
-                                'completed_games': tournament.completed_games
-                            })
+                        logger.info(f"Tournament progress: {tournament.completed_games}/{tournament.total_games} games")
             
             # Update ELO ratings
             self._update_elo_ratings(tournament.id)
@@ -389,7 +367,7 @@ class TournamentWorker:
             return True
             
         except Exception as e:
-            logger.error(f"Error resuming tournament from checkpoint: {e}")
+            logger.error(f"Error resuming tournament from database: {e}")
             return False
     
     def _run_tournament_from_start(self, tournament: Tournament) -> bool:
@@ -414,19 +392,26 @@ class TournamentWorker:
             tournament.completed_games = 0
             db.session.commit()
             
-            # Create initial checkpoint
-            self._create_checkpoint(tournament.id, 'tournament_started', {
-                'agent_ids': [agent.id for agent in agents],
-                'total_games': total_games,
-                'started_at': datetime.utcnow().isoformat()
-            })
+            # Check for existing games in case of recovery
+            existing_games = (Game.query
+                            .filter_by(tournament_id=tournament.id)
+                            .filter(Game.completed_at.isnot(None))
+                            .all())
             
-            completed_matchups = set()
+            completed_matchups = {(g.black_agent_id, g.white_agent_id) for g in existing_games}
+            tournament.completed_games = len(completed_matchups)
             
             # Run all games (round-robin)
             for i, agent1 in enumerate(agents):
                 for j, agent2 in enumerate(agents):
                     if i != j:  # Don't play against self
+                        matchup = (agent1.id, agent2.id)
+                        
+                        # Skip if already completed
+                        if matchup in completed_matchups:
+                            logger.debug(f"Skipping completed matchup: {agent1.name} vs {agent2.name}")
+                            continue
+                        
                         # Check if we should continue running
                         if not self.running:
                             logger.info("Worker shutdown requested during tournament")
@@ -438,33 +423,14 @@ class TournamentWorker:
                             logger.error(f"Game failed: {agent1.name} vs {agent2.name}")
                             continue
                         
-                        # Track progress
-                        matchup_id = f"{agent1.id}_vs_{agent2.id}"
-                        completed_matchups.add(matchup_id)
-                        
+                        # Update progress
                         tournament.completed_games += 1
                         db.session.commit()
                         
                         logger.info(f"Tournament progress: {tournament.completed_games}/{tournament.total_games} games")
-                        
-                        # Create checkpoint every 10 games
-                        if tournament.completed_games % 10 == 0:
-                            self._create_checkpoint(tournament.id, 'games_progress', {
-                                'completed_matchups': list(completed_matchups),
-                                'total_matchups': total_games,
-                                'completed_games': tournament.completed_games
-                            })
             
             # Update ELO ratings
             self._update_elo_ratings(tournament.id)
-            
-            # Final checkpoint
-            self._create_checkpoint(tournament.id, 'tournament_completed', {
-                'completed_matchups': list(completed_matchups),
-                'total_matchups': total_games,
-                'completed_games': tournament.completed_games,
-                'completed_at': datetime.utcnow().isoformat()
-            })
             
             return True
             
