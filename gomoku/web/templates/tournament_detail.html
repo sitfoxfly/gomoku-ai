@@ -99,6 +99,59 @@
     {% endif %}
 </div>
 
+<div class="row mb-4">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-users"></i> Participating Agents</h5>
+            </div>
+            <div class="card-body">
+                {% if participating_agents %}
+                <div class="row">
+                    {% for agent in participating_agents %}
+                    <div class="col-md-6 col-lg-4 mb-3">
+                        <div class="card h-100">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between align-items-start">
+                                    <div>
+                                        <h6 class="card-title mb-1">
+                                            <a href="{{ url_for('agent_detail', agent_id=agent.id) }}" class="text-decoration-none">
+                                                {{ agent.name }}
+                                            </a>
+                                        </h6>
+                                        <small class="text-muted">by {{ agent.author }}</small>
+                                    </div>
+                                    <span class="badge bg-primary">{{ agent.elo_rating }}</span>
+                                </div>
+                                <div class="mt-2">
+                                    <small class="text-success">
+                                        <i class="fas fa-trophy"></i> {{ agent.games_won }} wins
+                                    </small>
+                                    <small class="text-muted ms-2">
+                                        <i class="fas fa-gamepad"></i> {{ agent.games_played }} played
+                                    </small>
+                                </div>
+                                {% if agent.games_played > 0 %}
+                                <div class="mt-1">
+                                    <small class="text-info">{{ "%.1f"|format(agent.win_rate) }}% win rate</small>
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <p class="text-muted text-center">
+                    <i class="fas fa-info-circle"></i> 
+                    No agent information available. Agents will appear here once the tournament starts.
+                </p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
 <div class="row">
     <div class="col-md-12">
         <div class="card">

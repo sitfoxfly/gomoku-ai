@@ -257,6 +257,12 @@ class TournamentWorker:
                 self.job_manager.complete_job(job.id, False, "Tournament not found")
                 return
             
+            # Check if tournament was cancelled before starting
+            if tournament.status == 'cancelled':
+                logger.info(f"Tournament {job.tournament_id} was cancelled, skipping execution")
+                self.job_manager.complete_job(job.id, True, "Tournament was cancelled")
+                return
+            
             # Update tournament status
             tournament.status = 'running'
             tournament.started_at = datetime.utcnow()
@@ -349,6 +355,12 @@ class TournamentWorker:
                             logger.info("Worker shutdown requested during tournament")
                             return False
                         
+                        # Check if tournament was cancelled
+                        tournament_check = Tournament.query.get(tournament.id)
+                        if tournament_check and tournament_check.status == 'cancelled':
+                            logger.info(f"Tournament {tournament.id} was cancelled, stopping execution")
+                            return True
+                        
                         # Play the game
                         success = self.event_loop.run_until_complete(self._play_tournament_game(tournament.id, agent1.id, agent2.id))
                         if not success:
@@ -416,6 +428,12 @@ class TournamentWorker:
                         if not self.running:
                             logger.info("Worker shutdown requested during tournament")
                             return False
+                        
+                        # Check if tournament was cancelled
+                        tournament_check = Tournament.query.get(tournament.id)
+                        if tournament_check and tournament_check.status == 'cancelled':
+                            logger.info(f"Tournament {tournament.id} was cancelled, stopping execution")
+                            return True
                         
                         # Play the game
                         success = self.event_loop.run_until_complete(self._play_tournament_game(tournament.id, agent1.id, agent2.id))

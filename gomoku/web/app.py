@@ -252,7 +252,25 @@ def create_app(config=None):
                 .order_by(Game.started_at.desc())
                 .all())
         
-        return render_template('tournament_detail.html', tournament=tournament, games=games)
+        # Get participating agents
+        participating_agents = []
+        selected_agent_ids = tournament.get_selected_agent_ids()
+        if selected_agent_ids:
+            # Get selected agents
+            participating_agents = Agent.query.filter(Agent.id.in_(selected_agent_ids)).all()
+        else:
+            # If no specific agents selected, get agents from actual games
+            if games:
+                agent_ids = set()
+                for game in games:
+                    agent_ids.add(game.black_agent_id)
+                    agent_ids.add(game.white_agent_id)
+                participating_agents = Agent.query.filter(Agent.id.in_(agent_ids)).all()
+        
+        return render_template('tournament_detail.html', 
+                             tournament=tournament, 
+                             games=games, 
+                             participating_agents=participating_agents)
     
     @app.route('/tournaments/<int:tournament_id>/cancel', methods=['POST'])
     def cancel_tournament(tournament_id):
