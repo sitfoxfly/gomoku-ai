@@ -7,6 +7,7 @@ import os
 import signal
 import socket
 import sys
+import threading
 import time
 import traceback
 import atexit
@@ -200,6 +201,45 @@ class TournamentWorker:
                 
         except Exception as e:
             logger.error(f"Error cleaning up async resources: {e}")
+    
+    def _start_heartbeat_thread(self):
+        """Start the heartbeat thread."""
+        try:
+            import threading
+            
+            if self.heartbeat_thread is None or not self.heartbeat_thread.is_alive():
+                self.heartbeat_running = True
+                self.heartbeat_thread = threading.Thread(target=self._heartbeat_worker, daemon=True)
+                self.heartbeat_thread.start()
+                logger.info("Heartbeat thread started")
+            
+        except Exception as e:
+            logger.error(f"Error starting heartbeat thread: {e}")
+    
+    def _stop_heartbeat_thread(self):
+        """Stop the heartbeat thread."""
+        try:
+            self.heartbeat_running = False
+            if self.heartbeat_thread and self.heartbeat_thread.is_alive():
+                self.heartbeat_thread.join(timeout=5)
+                logger.info("Heartbeat thread stopped")
+            
+        except Exception as e:
+            logger.error(f"Error stopping heartbeat thread: {e}")
+    
+    def _heartbeat_worker(self):
+        """Worker function for heartbeat thread."""
+        heartbeat_interval = 30  # 30 seconds
+        
+        while self.heartbeat_running:
+            try:
+                time.sleep(heartbeat_interval)
+                if self.heartbeat_running:
+                    self._update_heartbeat()
+                    
+            except Exception as e:
+                logger.error(f"Error in heartbeat worker: {e}")
+                time.sleep(5)  # Brief pause before retrying
     
     def _work_loop(self):
         """Main work loop - polls for jobs and executes them."""
