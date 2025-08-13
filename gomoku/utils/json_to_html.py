@@ -6,64 +6,60 @@ import json
 import sys
 from pathlib import Path
 from typing import Dict, List, Tuple, Any
+from .serialization import safe_dumps
 
 
 class JSONToHTMLConverter:
     """Converts JSON game logs to interactive HTML format."""
-    
+
     def __init__(self, board_size: int, show_llm_logs: bool = True):
         self.board_size = board_size
         self.show_llm_logs = show_llm_logs
-    
+
     def _escape_html(self, text: str) -> str:
         """Escape HTML special characters."""
-        return (str(text)
-                .replace('&', '&amp;')
-                .replace('<', '&lt;')
-                .replace('>', '&gt;')
-                .replace('"', '&quot;')
-                .replace("'", '&#x27;'))
-    
+        return str(text).replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;').replace('"', '&quot;').replace("'", '&#x27;')
+
     def _generate_board_html(self, board: List[List[str]], highlights: List[Tuple[int, int]]) -> str:
         """Generate HTML table for the board."""
         html = '<table class="gomoku-board">'
-        
+
         # Header row with column numbers
         html += '<tr><th></th>'
         for col in range(self.board_size):
             html += f'<th>{col}</th>'
         html += '</tr>'
-        
+
         # Board rows
         for row in range(self.board_size):
             html += f'<tr><th>{row}</th>'
             for col in range(self.board_size):
                 piece = board[row][col]
                 cell_class = "cell"
-                
+
                 if (row, col) in highlights:
                     cell_class += " winning"
-                
+
                 if piece == "X":
                     cell_class += " black"
                 elif piece == "O":
                     cell_class += " white"
-                
+
                 html += f'<td class="{cell_class}" data-row="{row}" data-col="{col}">'
                 if piece != ".":
                     html += piece
                 html += '</td>'
             html += '</tr>'
-        
+
         html += '</table>'
         return html
-    
+
     def _format_result_banner(self, result: dict) -> str:
         """Format the result banner text based on game outcome."""
         winner = result.get('winner')
         reason = result.get('reason', 'Game completed')
         result_code = result.get('result_code', '')
-        
+
         if winner is None:
             # Draw game
             if result_code == 'DR':
@@ -73,24 +69,24 @@ class JSONToHTMLConverter:
         else:
             # Someone won
             return f"Winner: {winner} - {reason}"
-    
+
     def generate_html(self, game_data: Dict[str, Any]) -> str:
         """Generate complete interactive HTML from game data."""
         metadata = game_data.get('game_metadata', {})
         result = game_data.get('game_result', {})
-        
+
         agent1_name = metadata.get('agent1', 'Agent1')
         agent2_name = metadata.get('agent2', 'Agent2')
         board_size = metadata.get('board_size', self.board_size)
-        
+
         moves = result.get('game_log', [])
         winning_sequence = result.get('winning_sequence', [])
-        
+
         # Create move history with board states
         board_states = []
         current_board = [['.' for _ in range(board_size)] for _ in range(board_size)]
         board_states.append([row[:] for row in current_board])  # Initial empty board
-        
+
         for move in moves:
             # Skip illegal moves - they don't change the board state
             if move.get('illegal', False):
@@ -103,7 +99,7 @@ class JSONToHTMLConverter:
                 piece = 'X' if move['move_number'] % 2 == 1 else 'O'
                 current_board[row][col] = piece
                 board_states.append([row[:] for row in current_board])
-        
+
         html = f"""
 <!DOCTYPE html>
 <html>
@@ -374,11 +370,11 @@ class JSONToHTMLConverter:
             <h1>Gomoku Game Log</h1>
             <h2>{agent1_name} vs {agent2_name}</h2>
         </div>
-        
+
         <div class="result-banner">
             🏆 {self._format_result_banner(result)}
         </div>
-        
+
         <div class="game-info">
             <div class="info-card">
                 <h3>Game Details</h3>
@@ -392,27 +388,27 @@ class JSONToHTMLConverter:
                 <p><strong>White (O):</strong> {agent2_name}</p>
             </div>
         </div>
-        
+
         <div class="board-container">
             <div class="board-section">
                 <div id="board-display">
                     {self._generate_board_html(board_states[0] if board_states else [], [])}
                 </div>
-                
+
                 <div class="controls">
                     <button id="play-btn" onclick="toggleAutoPlay()">▶️ Play</button>
                     <button id="first-btn" onclick="goToMove(0)">⏮ First</button>
                     <button id="prev-btn" onclick="previousMove()">⏪ Previous</button>
                     <button id="next-btn" onclick="nextMove()">Next ⏩</button>
                     <button id="last-btn" onclick="goToMove({len(board_states) - 1})">Last ⏭</button>
-                    
+
                     <div class="move-info">
                         <div id="move-display">Move: 0 / {len(board_states) - 1}</div>
                         <div id="current-player">Current Position: Game Start</div>
                     </div>
                 </div>
             </div>
-            
+
             <div class="history-section">
                 <h3>Move History</h3>
                 <div class="move-list" id="move-list">
@@ -421,13 +417,13 @@ class JSONToHTMLConverter:
                         Empty board
                     </div>
 """
-        
+
         # Add move history
         for i, move in enumerate(moves):
             # Determine player symbol based on move number: odd moves are BLACK (X), even moves are WHITE (O)
             player_symbol = 'X' if move['move_number'] % 2 == 1 else 'O'
             illegal_class = " illegal" if move.get('illegal', False) else ""
-            
+
             if move.get('illegal', False):
                 # Handle illegal moves
                 if move['position'] is None:
@@ -435,8 +431,10 @@ class JSONToHTMLConverter:
                     position_text = f"TIMEOUT - {move.get('reason', 'Unknown error')}"
                 else:
                     # Invalid position case
-                    position_text = f"ILLEGAL MOVE: ({move['position'][0]}, {move['position'][1]}) - {move.get('reason', 'Invalid position')}"
-                    
+                    position_text = (
+                        f"ILLEGAL MOVE: ({move['position'][0]}, {move['position'][1]}) - {move.get('reason', 'Invalid position')}"
+                    )
+
                 move_html = f"""
                     <div class="move-item{illegal_class}" onclick="goToMove({i + 1})">
                         <strong>Move {i + 1}: {player_symbol} ❌</strong><br>
@@ -451,7 +449,7 @@ class JSONToHTMLConverter:
                         {move['player']}<br>
                         Position: ({move['position'][0]}, {move['position'][1]})<br>
                         Time: {move['time']:.2f}s"""
-            
+
             # Add LLM conversations if available and enabled
             llm_conversations = move.get('llm_conversations', [])
             if llm_conversations and self.show_llm_logs:
@@ -461,7 +459,7 @@ class JSONToHTMLConverter:
                             🤖 LLM Log ({conversation_count})
                         </button>
                         <div id="llm-{i}" class="llm-conversation" style="display: none;">"""
-                
+
                 # Display each conversation
                 for conv_idx, llm_data in enumerate(llm_conversations):
                     move_html += f"""
@@ -470,7 +468,7 @@ class JSONToHTMLConverter:
                                     Call #{conv_idx + 1} - Model: {llm_data.get('model', 'Unknown')}
                                 </div>
                                 <div class="llm-input">"""
-                    
+
                     # Format input messages
                     if isinstance(llm_data.get('input'), list):
                         for msg in llm_data['input']:
@@ -483,7 +481,7 @@ class JSONToHTMLConverter:
                         move_html += f"""
                                     <div class="llm-role">Input:</div>
                                     <div class="llm-content">{self._escape_html(str(llm_data.get('input', '')))}</div>"""
-                    
+
                     move_html += f"""
                                 </div>
                                 <div class="llm-output">
@@ -491,56 +489,56 @@ class JSONToHTMLConverter:
                                     <div class="llm-content">{self._escape_html(llm_data.get('output', ''))}</div>
                                 </div>
                             </div>"""
-                
+
                 move_html += "</div>"
-            
+
             move_html += "</div>"
             html += move_html
-        
+
         html += f"""
                 </div>
             </div>
         </div>"""
-        
+
         html += f"""
     </div>
-    
+
     <script>
-        const boardStates = {json.dumps(board_states)};
-        const moves = {json.dumps(moves)};
-        const winningSequence = {json.dumps(winning_sequence)};
+        const boardStates = {safe_dumps(board_states)};
+        const moves = {safe_dumps(moves)};
+        const winningSequence = {safe_dumps(winning_sequence)};
         let currentMove = 0;
         let isPlaying = false;
         let playInterval = null;
-        
+
         function updateBoard() {{
             const board = boardStates[currentMove];
             const highlights = currentMove === boardStates.length - 1 ? winningSequence : [];
-            
+
             let html = '<table class="gomoku-board">';
             html += '<tr><th></th>';
             for (let col = 0; col < {board_size}; col++) {{
                 html += '<th>' + col + '</th>';
             }}
             html += '</tr>';
-            
+
             for (let row = 0; row < {board_size}; row++) {{
                 html += '<tr><th>' + row + '</th>';
                 for (let col = 0; col < {board_size}; col++) {{
                     const piece = board[row][col];
                     let cellClass = "cell";
-                    
+
                     const isWinning = highlights.some(pos => pos[0] === row && pos[1] === col);
                     if (isWinning) {{
                         cellClass += " winning";
                     }}
-                    
+
                     if (piece === "X") {{
                         cellClass += " black";
                     }} else if (piece === "O") {{
                         cellClass += " white";
                     }}
-                    
+
                     html += '<td class="' + cellClass + '" data-row="' + row + '" data-col="' + col + '">';
                     if (piece !== ".") {{
                         html += piece;
@@ -550,12 +548,12 @@ class JSONToHTMLConverter:
                 html += '</tr>';
             }}
             html += '</table>';
-            
+
             document.getElementById('board-display').innerHTML = html;
-            
+
             // Update move info
             document.getElementById('move-display').textContent = 'Move: ' + currentMove + ' / ' + (boardStates.length - 1);
-            
+
             let currentPlayerText = "Game Start";
             if (currentMove > 0) {{
                 const move = moves[currentMove - 1];
@@ -574,39 +572,39 @@ class JSONToHTMLConverter:
                 }}
             }}
             document.getElementById('current-player').textContent = currentPlayerText;
-            
+
             // Update button states
             document.getElementById('first-btn').disabled = currentMove === 0 || isPlaying;
             document.getElementById('prev-btn').disabled = currentMove === 0 || isPlaying;
             document.getElementById('next-btn').disabled = currentMove === boardStates.length - 1 || isPlaying;
             document.getElementById('last-btn').disabled = currentMove === boardStates.length - 1 || isPlaying;
-            
+
             // Update move list
             const moveItems = document.querySelectorAll('.move-item');
             moveItems.forEach((item, index) => {{
                 item.classList.toggle('current', index === currentMove);
             }});
         }}
-        
+
         function goToMove(moveIndex) {{
             currentMove = Math.max(0, Math.min(boardStates.length - 1, moveIndex));
             updateBoard();
         }}
-        
+
         function nextMove() {{
             if (currentMove < boardStates.length - 1) {{
                 currentMove++;
                 updateBoard();
             }}
         }}
-        
+
         function previousMove() {{
             if (currentMove > 0) {{
                 currentMove--;
                 updateBoard();
             }}
         }}
-        
+
         function toggleAutoPlay() {{
             if (isPlaying) {{
                 stopAutoPlay();
@@ -614,16 +612,16 @@ class JSONToHTMLConverter:
                 startAutoPlay();
             }}
         }}
-        
+
         function startAutoPlay() {{
             if (currentMove >= boardStates.length - 1) {{
                 currentMove = 0; // Reset to beginning if at end
             }}
-            
+
             isPlaying = true;
             document.getElementById('play-btn').textContent = '⏸️ Pause';
             updateBoard();
-            
+
             playInterval = setInterval(() => {{
                 if (currentMove < boardStates.length - 1) {{
                     currentMove++;
@@ -633,7 +631,7 @@ class JSONToHTMLConverter:
                 }}
             }}, 1000); // 1 second between moves
         }}
-        
+
         function stopAutoPlay() {{
             isPlaying = false;
             document.getElementById('play-btn').textContent = '▶️ Play';
@@ -643,7 +641,7 @@ class JSONToHTMLConverter:
             }}
             updateBoard();
         }}
-        
+
         function toggleLLMConversation(elementId) {{
             const element = document.getElementById(elementId);
             if (element.style.display === 'none') {{
@@ -652,11 +650,11 @@ class JSONToHTMLConverter:
                 element.style.display = 'none';
             }}
         }}
-        
+
         // Keyboard navigation
         document.addEventListener('keydown', function(e) {{
             if (isPlaying && e.key !== ' ') return; // Only allow spacebar when playing
-            
+
             switch(e.key) {{
                 case 'ArrowLeft':
                     previousMove();
@@ -676,7 +674,7 @@ class JSONToHTMLConverter:
                     break;
             }}
         }});
-        
+
         // Initialize
         updateBoard();
     </script>
@@ -692,42 +690,42 @@ def main():
     parser.add_argument("json_file", help="Path to JSON log file")
     parser.add_argument("-o", "--output", help="Output HTML file path (default: input.html)")
     parser.add_argument("--no-llm-logs", action="store_true", help="Hide LLM request-response logs")
-    
+
     args = parser.parse_args()
-    
+
     json_path = Path(args.json_file)
     if not json_path.exists():
         print(f"Error: JSON file not found: {json_path}", file=sys.stderr)
         sys.exit(1)
-    
+
     # Determine output path
     if args.output:
         html_path = Path(args.output)
     else:
         html_path = json_path.with_suffix('.html')
-    
+
     try:
         # Read JSON file
         with json_path.open('r', encoding='utf-8') as f:
             game_data = json.load(f)
-        
+
         # Extract board size
         board_size = game_data.get('game_metadata', {}).get('board_size', 15)
-        
+
         # Determine if LLM logs should be shown
         show_llm_logs = not args.no_llm_logs
-        
+
         # Convert to HTML
         converter = JSONToHTMLConverter(board_size, show_llm_logs)
         html_content = converter.generate_html(game_data)
-        
+
         # Write HTML file
         html_path.parent.mkdir(parents=True, exist_ok=True)
         html_path.write_text(html_content, encoding='utf-8')
-        
+
         print(f"HTML file generated: {html_path.absolute()}")
         print(f"Open in browser: file://{html_path.absolute()}")
-        
+
     except Exception as e:
         print(f"Error converting JSON to HTML: {e}", file=sys.stderr)
         sys.exit(1)

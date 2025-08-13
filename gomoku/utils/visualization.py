@@ -1,9 +1,9 @@
 """Board visualization utilities and formatters."""
 
-import json
 from abc import ABC, abstractmethod
 from typing import List, Tuple, Optional, Dict
 from ..core.models import GameState
+from .serialization import safe_dumps
 
 
 class BoardFormatter(ABC):
@@ -14,8 +14,7 @@ class BoardFormatter(ABC):
         """Format the board for LLM consumption."""
         pass
 
-    def format_board_with_highlights(self, board: List[List[str]], 
-                                     highlights: List[Tuple[int, int]]) -> str:
+    def format_board_with_highlights(self, board: List[List[str]], highlights: List[Tuple[int, int]]) -> str:
         """Format board with highlighted positions."""
         # Default implementation - subclasses can override
         return self.format_board_simple(board)
@@ -39,10 +38,10 @@ class BoardFormatter(ABC):
 
 class SimpleBoardFormatter(BoardFormatter):
     """Simple text-based board formatter."""
-    
+
     def __init__(self, board_size: int = 8):
         self.board_size = board_size
-    
+
     def format_board(self, state: GameState) -> str:
         """Format board for display."""
         result = "   "
@@ -57,9 +56,8 @@ class SimpleBoardFormatter(BoardFormatter):
             result += "\n"
 
         return result
-    
-    def format_board_with_highlights(self, board: List[List[str]],
-                                     highlights: List[Tuple[int, int]]) -> str:
+
+    def format_board_with_highlights(self, board: List[List[str]], highlights: List[Tuple[int, int]]) -> str:
         """Format board with highlighted positions (simple version)."""
         result = "   "
         for col in range(self.board_size):
@@ -81,15 +79,15 @@ class SimpleBoardFormatter(BoardFormatter):
 
 class ColorBoardFormatter(BoardFormatter):
     """Color-enhanced board formatter with ANSI colors."""
-    
+
     def __init__(self, board_size: int = 8):
         self.board_size = board_size
         # ANSI color codes
         self.RED = "\033[91m"
-        self.GREEN = "\033[92m" 
+        self.GREEN = "\033[92m"
         self.YELLOW = "\033[93m"
         self.RESET = "\033[0m"
-    
+
     def format_board(self, state: GameState) -> str:
         """Format board for display."""
         result = "   "
@@ -104,9 +102,8 @@ class ColorBoardFormatter(BoardFormatter):
             result += "\n"
 
         return result
-    
-    def format_board_with_highlights(self, board: List[List[str]],
-                                     highlights: List[Tuple[int, int]]) -> str:
+
+    def format_board_with_highlights(self, board: List[List[str]], highlights: List[Tuple[int, int]]) -> str:
         """Format board with highlighted positions in color."""
         result = "   "
         for col in range(self.board_size):
@@ -201,7 +198,7 @@ class JSONFormatter(BoardFormatter):
             "move_count": len(state.move_history),
         }
 
-        return json.dumps(board_data, indent=2)
+        return safe_dumps(board_data, indent=2)
 
     def format_full_prompt(self, state: GameState, context: Optional[Dict] = None) -> str:
         """Full JSON format."""
@@ -222,7 +219,7 @@ class JSONFormatter(BoardFormatter):
         if context:
             data.update(context)
 
-        return json.dumps(data, indent=2)
+        return safe_dumps(data, indent=2)
 
 
 class StrategicFormatter(BoardFormatter):

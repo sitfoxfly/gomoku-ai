@@ -10,6 +10,7 @@ from ..arena.game_arena import GomokuArena
 from ..core.models import GameResult
 from ..utils.visualization import ColorBoardFormatter
 from ..utils.json_to_html import JSONToHTMLConverter
+from ..utils.serialization import safe_dump
 from .models import db, Agent, Tournament, Game
 
 
@@ -148,9 +149,8 @@ class TournamentRunner:
             }
 
             # Save game log to JSON file
-            import json
             with open(log_path, 'w') as f:
-                json.dump(game_data, f, indent=2)
+                safe_dump(game_data, f, indent=2)
             game.game_log_path = str(log_path)
 
             # Generate HTML visualization
@@ -168,7 +168,7 @@ class TournamentRunner:
 
             # Determine winner and update stats
             game_result_str = result.get('result')
-            
+
             # Convert string result to enum for safer comparison
             try:
                 game_result = GameResult(game_result_str)
@@ -178,7 +178,7 @@ class TournamentRunner:
                 game.error_message = f"Unknown game result: {game_result_str}"
                 db.session.commit()
                 return game
-            
+
             if game_result == GameResult.BLACK_WIN:
                 game.result = 'black_wins'
                 game.winner_id = black_agent_id
@@ -196,7 +196,7 @@ class TournamentRunner:
                 # Timeout counts as a loss for the agent that timed out
                 loser_id = result.get('loser')  # Arena returns loser agent ID
                 winner_id = result.get('winner')  # Arena returns winner agent ID
-                
+
                 if loser_id == black_agent_db.name:
                     game.result = 'white_wins'
                     game.winner_id = white_agent_id
@@ -215,7 +215,7 @@ class TournamentRunner:
                 # Invalid move counts as a loss for the agent that made the invalid move
                 loser_id = result.get('loser')  # Arena returns loser agent ID
                 winner_id = result.get('winner')  # Arena returns winner agent ID
-                
+
                 if loser_id == black_agent_db.name:
                     game.result = 'white_wins'
                     game.winner_id = white_agent_id
