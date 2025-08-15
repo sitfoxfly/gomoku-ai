@@ -56,10 +56,14 @@ class JobManager:
             db.session.rollback()
             return None
 
-    def get_next_job(self, worker_id: str) -> Optional[TournamentJob]:
+    def get_next_job(self, worker_id: str, random_selection: bool = True) -> Optional[TournamentJob]:
         """
         Get the next pending job for a worker.
         Each worker can only handle one job at a time, but multiple workers can run simultaneously.
+        
+        Args:
+            worker_id: ID of the worker requesting a job
+            random_selection: If True, select a random pending job instead of priority order
         """
         try:
             # Check if this specific worker is already running a job
@@ -77,11 +81,19 @@ class JobManager:
                     logger.warning(f"Worker {worker_id}'s job {worker_current_job.id} is unhealthy, marking as failed")
                     self._mark_job_failed(worker_current_job, "Worker heartbeat timeout")
 
-            # Get next pending job with highest priority
-            job = (TournamentJob.query
-                   .filter_by(status='pending')
-                   .order_by(TournamentJob.priority.desc(), TournamentJob.created_at.asc())
-                   .first())
+            # Get next pending job - either random or by priority
+            if random_selection:
+                # Get random pending job using database-level random ordering
+                job = (TournamentJob.query
+                       .filter_by(status='pending')
+                       .order_by(db.func.random())
+                       .first())
+            else:
+                # Get next pending job with highest priority (original behavior)
+                job = (TournamentJob.query
+                       .filter_by(status='pending')
+                       .order_by(TournamentJob.priority.desc(), TournamentJob.created_at.asc())
+                       .first())
 
             if job:
                 # Assign job to worker
@@ -90,9 +102,15 @@ class JobManager:
                 job.started_at = datetime.utcnow()
                 job.last_heartbeat = datetime.utcnow()
 
+                # Update worker's current job
+                worker = WorkerProcess.query.get(worker_id)
+                if worker:
+                    worker.current_job_id = job.id
+
                 db.session.commit()
 
-                logger.info(f"Assigned job {job.id} (tournament {job.tournament_id}) to worker {worker_id}")
+                selection_type = "random" if random_selection else "priority-based"
+                logger.info(f"Assigned job {job.id} (tournament {job.tournament_id}) to worker {worker_id} ({selection_type} selection)")
                 return job
 
             return None
