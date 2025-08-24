@@ -72,6 +72,9 @@ class TournamentWorker:
         self.log_dir = Path('game_logs')
         self.log_dir.mkdir(exist_ok=True)
         
+        # LLM log configuration from environment
+        self.show_llm_logs = os.getenv('TOURNAMENT_SHOW_LLM_LOGS', 'false').lower() in ('true', '1', 'yes')
+        
         # Setup signal handlers
         signal.signal(signal.SIGTERM, self._handle_shutdown)
         signal.signal(signal.SIGINT, self._handle_shutdown)
@@ -514,7 +517,7 @@ class TournamentWorker:
         """Play a single game between two agents."""
         try:
             from gomoku.web.tournament import TournamentRunner
-            runner = TournamentRunner()
+            runner = TournamentRunner(show_llm_logs=self.show_llm_logs)
             
             # Use existing game playing logic
             game = await runner._play_game(tournament_id, black_agent_id, white_agent_id)

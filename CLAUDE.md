@@ -230,6 +230,15 @@ python -m gomoku web run --debug
 python -m gomoku web run --host 0.0.0.0 --port 8000
 ```
 
+### Environment Variables
+
+The web interface supports several environment variables for configuration:
+
+- **`TOURNAMENT_SHOW_LLM_LOGS`**: Controls whether LLM conversation logs are included in generated HTML game visualizations
+  - Default: `false` (for tournament worker), `true` (for manual game viewing)
+  - Values: `true`, `1`, `yes` (enable) or `false`, `0`, `no` (disable)
+  - Used by both the tournament worker and the web interface
+
 ### Security Features
 
 - **Code Validation**: AST parsing to detect dangerous imports and functions

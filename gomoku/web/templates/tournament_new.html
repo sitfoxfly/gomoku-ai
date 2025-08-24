@@ -14,7 +14,7 @@
         </nav>
 
         <h1><i class="fas fa-plus-circle"></i> Create New Tournament</h1>
-        <p class="lead">Select exactly 2 agents to compete in a head-to-head tournament</p>
+        <p class="lead">Select 2 or more agents to compete in a round-robin tournament</p>
     </div>
 </div>
 
@@ -23,13 +23,21 @@
         <div class="col-md-8">
             <div class="card">
                 <div class="card-header">
-                    <h5><i class="fas fa-users"></i> Select Exactly 2 Agents</h5>
+                    <h5><i class="fas fa-users"></i> Select Agents (2 or more)</h5>
                 </div>
                 <div class="card-body">
                     {% if agents %}
                     <div class="mb-3">
                         <div class="alert alert-info">
-                            <i class="fas fa-info-circle"></i> Please select exactly 2 agents for the tournament.
+                            <i class="fas fa-info-circle"></i> Please select 2 or more agents for the tournament.
+                        </div>
+                        <div class="d-flex gap-2 mb-3">
+                            <button type="button" class="btn btn-outline-primary btn-sm" id="select_all_agents">
+                                <i class="fas fa-check-square"></i> Select All
+                            </button>
+                            <button type="button" class="btn btn-outline-secondary btn-sm" id="deselect_all_agents">
+                                <i class="fas fa-square"></i> Deselect All
+                            </button>
                         </div>
                     </div>
                     
@@ -88,6 +96,15 @@
                         <label for="tournament_name" class="form-label">Tournament Name</label>
                         <input type="text" class="form-control" id="tournament_name" name="tournament_name"
                                placeholder="Leave empty for auto-generated name">
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="tournament_password" class="form-label">
+                            <i class="fas fa-lock"></i> System Password <span class="text-danger">*</span>
+                        </label>
+                        <input type="password" class="form-control" id="tournament_password" name="tournament_password"
+                               placeholder="Required to create tournaments" required>
+                        <div class="form-text">Contact the administrator to get the system password.</div>
                     </div>
                     
                     <div class="alert alert-info">
@@ -150,9 +167,9 @@ document.addEventListener('DOMContentLoaded', function() {
         const selectedCount = document.querySelectorAll('.agent-checkbox:checked').length;
         
         selectedCountElement.textContent = `${selectedCount} agents selected`;
-        totalGamesElement.textContent = `${selectedCount === 2 ? 2 : 0} total games`;
+        totalGamesElement.textContent = `${selectedCount >= 2 ? selectedCount * (selectedCount - 1) : 0} total games`;
         
-        if (selectedCount === 2) {
+        if (selectedCount >= 2) {
             startButton.disabled = false;
             tournamentInfo.style.display = 'block';
             tournamentInfo.className = 'alert alert-success';
@@ -162,9 +179,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 tournamentInfo.style.display = 'block';
                 tournamentInfo.className = 'alert alert-warning';
                 if (selectedCount === 1) {
-                    selectedCountElement.textContent += ' (select 1 more agent)';
-                } else if (selectedCount > 2) {
-                    selectedCountElement.textContent += ' (too many selected, limit is 2)';
+                    selectedCountElement.textContent += ' (select at least 1 more agent)';
                 }
             } else {
                 tournamentInfo.style.display = 'none';
@@ -172,16 +187,33 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
     
-    // Individual checkbox functionality with 2-agent limit enforcement
+    // Select/Deselect all functionality
+    const selectAllButton = document.getElementById('select_all_agents');
+    const deselectAllButton = document.getElementById('deselect_all_agents');
+    
+    if (selectAllButton) {
+        selectAllButton.addEventListener('click', function() {
+            agentCheckboxes.forEach(checkbox => {
+                checkbox.checked = true;
+            });
+            updateTournamentInfo();
+        });
+    }
+    
+    if (deselectAllButton) {
+        deselectAllButton.addEventListener('click', function() {
+            agentCheckboxes.forEach(checkbox => {
+                checkbox.checked = false;
+            });
+            updateTournamentInfo();
+        });
+    }
+    
+    // Individual checkbox functionality
     agentCheckboxes.forEach(checkbox => {
         checkbox.addEventListener('change', function() {
             const selectedCount = document.querySelectorAll('.agent-checkbox:checked').length;
             
-            // If trying to select more than 2, prevent the selection
-            if (this.checked && selectedCount > 2) {
-                this.checked = false;
-                return;
-            }
             
             updateTournamentInfo();
         });
@@ -194,10 +226,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 const checkbox = card.querySelector('.agent-checkbox');
                 const selectedCount = document.querySelectorAll('.agent-checkbox:checked').length;
                 
-                // If trying to select more than 2, prevent the selection
-                if (!checkbox.checked && selectedCount >= 2) {
-                    return;
-                }
                 
                 checkbox.checked = !checkbox.checked;
                 updateTournamentInfo();

@@ -51,9 +51,14 @@
                     <div class="mb-3">
                         <label for="agent_file" class="form-label">Agent Python File *</label>
                         <input type="file" class="form-control" id="agent_file" name="agent_file"
-                               accept=".py" required>
+                               accept=".py" required onchange="analyzeAgentFile()">
                         <div class="form-text">
                             Upload your Python file containing the agent implementation
+                        </div>
+                        <div id="file-analysis" class="mt-2" style="display: none;">
+                            <div class="alert alert-info">
+                                <div id="analysis-content"></div>
+                            </div>
                         </div>
                     </div>
 
@@ -109,4 +114,70 @@ class MyAgent(Agent):
         </div>
     </div>
 </div>
+
+<script>
+function analyzeAgentFile() {
+    const fileInput = document.getElementById('agent_file');
+    const analysisDiv = document.getElementById('file-analysis');
+    const analysisContent = document.getElementById('analysis-content');
+    
+    if (!fileInput.files || fileInput.files.length === 0) {
+        analysisDiv.style.display = 'none';
+        return;
+    }
+    
+    const file = fileInput.files[0];
+    
+    // Show loading message
+    analysisContent.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Analyzing agent file...';
+    analysisDiv.style.display = 'block';
+    
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        const formData = new FormData();
+        formData.append('file_content', e.target.result);
+        
+        fetch('/api/analyze-agent', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.error) {
+                analysisContent.innerHTML = `<i class="fas fa-exclamation-triangle text-warning"></i> ${data.error}`;
+            } else {
+                // Auto-populate form fields
+                if (data.agent_name) {
+                    document.getElementById('name').value = data.agent_name;
+                }
+                if (data.agent_class) {
+                    document.getElementById('class_name').value = data.agent_class;
+                }
+                if (data.description) {
+                    document.getElementById('description').value = data.description;
+                }
+                
+                // Show analysis results
+                let content = '<i class="fas fa-check-circle text-success"></i> Agent analysis complete:<br>';
+                content += `<strong>Agent Class:</strong> ${data.agent_class || 'Not detected'}<br>`;
+                content += `<strong>Suggested Name:</strong> ${data.agent_name || 'Not detected'}<br>`;
+                if (data.description) {
+                    content += `<strong>Description:</strong> ${data.description}<br>`;
+                }
+                
+                analysisContent.innerHTML = content;
+            }
+        })
+        .catch(error => {
+            analysisContent.innerHTML = `<i class="fas fa-exclamation-triangle text-danger"></i> Error analyzing file: ${error.message}`;
+        });
+    };
+    
+    reader.onerror = function() {
+        analysisContent.innerHTML = '<i class="fas fa-exclamation-triangle text-danger"></i> Error reading file';
+    };
+    
+    reader.readAsText(file);
+}
+</script>
 {% endblock %}

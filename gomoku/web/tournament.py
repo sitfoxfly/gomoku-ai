@@ -2,6 +2,7 @@
 
 import asyncio
 import json
+import os
 from datetime import datetime
 from pathlib import Path
 from typing import List, Optional, Dict, Any
@@ -17,16 +18,20 @@ from .models import db, Agent, Tournament, Game
 class TournamentRunner:
     """Manages and executes tournaments between agents."""
 
-    def __init__(self, upload_dir: str = "uploads", log_dir: str = "game_logs", board_size: int = 8):
+    def __init__(self, upload_dir: str = "uploads", log_dir: str = "game_logs", board_size: int = 8, show_llm_logs: bool = False):
         self.upload_dir = Path(upload_dir)
         self.log_dir = Path(log_dir)
         self.log_dir.mkdir(exist_ok=True)
         self.board_size = board_size
+        self.show_llm_logs = show_llm_logs
+
+        # Get timeout from environment variable, default to 30 seconds
+        timeout = float(os.environ.get('GOMOKU_MOVE_TIMEOUT', '30.0'))
 
         # Create arena with color formatter for better visualization
         self.arena = GomokuArena(
             board_size=board_size,
-            time_limit=30.0,  # 30 second timeout per move
+            time_limit=timeout,
             formatter=ColorBoardFormatter(board_size)
         )
 
@@ -126,7 +131,7 @@ class TournamentRunner:
                 return game
 
             # Create log file path
-            log_filename = f"game_{game.id}_{black_agent_db.name}_vs_{white_agent_db.name}.json"
+            log_filename = f"game_{game.id}_{black_agent_db.id}_vs_{white_agent_db.id}.json"
             log_path = self.log_dir / log_filename
 
             # Play the game
@@ -154,10 +159,10 @@ class TournamentRunner:
             game.game_log_path = str(log_path)
 
             # Generate HTML visualization
-            html_filename = f"game_{game.id}_{black_agent_db.name}_vs_{white_agent_db.name}.html"
+            html_filename = f"game_{game.id}_{black_agent_db.id}_vs_{white_agent_db.id}.html"
             html_path = self.log_dir / html_filename
             try:
-                converter = JSONToHTMLConverter(self.board_size, show_llm_logs=False)
+                converter = JSONToHTMLConverter(self.board_size, show_llm_logs=self.show_llm_logs)
                 html_content = converter.generate_html(game_data)
                 with open(html_path, 'w', encoding='utf-8') as f:
                     f.write(html_content)
@@ -379,8 +384,8 @@ class TournamentRunner:
         tournament = Tournament(name=name)
 
         if selected_agent_ids:
-            if len(selected_agent_ids) != 2:
-                raise ValueError("Tournament is restricted to exactly 2 agents")
+            if len(selected_agent_ids) < 2:
+                raise ValueError("Tournament requires at least 2 agents")
             tournament.set_selected_agent_ids(selected_agent_ids)
 
         db.session.add(tournament)

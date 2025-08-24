@@ -26,6 +26,7 @@ def create_app(config=None):
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
     app.config['UPLOAD_FOLDER'] = os.environ.get('UPLOAD_FOLDER', 'uploads')
     app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
+    app.config['TOURNAMENT_PASSWORD'] = os.environ.get('TOURNAMENT_PASSWORD', 'admin123')
     
     if config:
         app.config.update(config)
@@ -211,16 +212,23 @@ def create_app(config=None):
     def create_tournament():
         """Create and queue a new tournament."""
         try:
+            # Check system password first
+            provided_password = request.form.get('tournament_password', '').strip()
+            
+            if provided_password != app.config['TOURNAMENT_PASSWORD']:
+                flash('Incorrect password. You need the system password to create tournaments.', 'error')
+                return redirect(url_for('new_tournament'))
+            
             # Get selected agents from form
             selected_agent_ids = request.form.getlist('selected_agents')
             tournament_name = request.form.get('tournament_name', '').strip()
             
             if not selected_agent_ids:
-                flash('Please select exactly 2 agents for the tournament.', 'error')
+                flash('Please select at least 2 agents for the tournament.', 'error')
                 return redirect(url_for('new_tournament'))
             
-            if len(selected_agent_ids) != 2:
-                flash('Tournament is restricted to exactly 2 agents.', 'error')
+            if len(selected_agent_ids) < 2:
+                flash('Tournament requires at least 2 agents.', 'error')
                 return redirect(url_for('new_tournament'))
             
             # Convert to integers
@@ -283,6 +291,13 @@ def create_app(config=None):
     def cancel_tournament(tournament_id):
         """Cancel a running tournament."""
         try:
+            # Check system password first
+            provided_password = request.form.get('tournament_password', '').strip()
+            
+            if provided_password != app.config['TOURNAMENT_PASSWORD']:
+                flash('Incorrect password. You need the system password to cancel tournaments.', 'error')
+                return redirect(url_for('tournament_detail', tournament_id=tournament_id))
+            
             tournament = Tournament.query.get_or_404(tournament_id)
             
             if tournament.status == 'running':
@@ -301,6 +316,13 @@ def create_app(config=None):
     def delete_tournament(tournament_id):
         """Delete a tournament and all its games."""
         try:
+            # Check system password first
+            provided_password = request.form.get('tournament_password', '').strip()
+            
+            if provided_password != app.config['TOURNAMENT_PASSWORD']:
+                flash('Incorrect password. You need the system password to delete tournaments.', 'error')
+                return redirect(url_for('tournament_detail', tournament_id=tournament_id))
+            
             tournament = Tournament.query.get_or_404(tournament_id)
             tournament_name = tournament.name
             
@@ -354,11 +376,12 @@ def create_app(config=None):
                     board_size = game_data.get('game_metadata', {}).get('board_size', 15)
                     
                     # Generate HTML content
-                    converter = JSONToHTMLConverter(board_size, show_llm_logs=True)
+                    show_llm_logs = os.getenv('TOURNAMENT_SHOW_LLM_LOGS', 'true').lower() in ('true', '1', 'yes')
+                    converter = JSONToHTMLConverter(board_size, show_llm_logs=show_llm_logs)
                     html_content = converter.generate_html(game_data)
                     
                     # Save the HTML file for future use
-                    html_filename = f"game_{game.id}_{game.black_agent.name}_vs_{game.white_agent.name}.html"
+                    html_filename = f"game_{game.id}_{game.black_agent.id}_vs_{game.white_agent.id}.html"
                     html_path = Path(current_app.config.get('UPLOAD_FOLDER', 'uploads')) / 'game_logs' / html_filename
                     html_path.parent.mkdir(exist_ok=True)
                     
@@ -510,6 +533,29 @@ def create_app(config=None):
                 .limit(limit)
                 .all())
         return jsonify([job.to_dict() for job in jobs])
+    
+    @app.route('/api/analyze-agent', methods=['POST'])
+    def api_analyze_agent():
+        """API endpoint for analyzing agent file content."""
+        from gomoku.utils.agent_parser import AgentParser
+        
+        file_content = request.form.get('file_content', '')
+        if not file_content:
+            return jsonify({'error': 'No file content provided'}), 400
+        
+        try:
+            # Parse the agent file
+            result = AgentParser.parse_agent_file(file_content)
+            
+            # Also validate structure for better feedback
+            is_valid, validation_message = AgentParser.validate_agent_structure(file_content)
+            result['is_valid'] = is_valid
+            result['validation_message'] = validation_message
+            
+            return jsonify(result)
+            
+        except Exception as e:
+            return jsonify({'error': f'Unexpected error: {str(e)}'}), 500
     
     return app
 

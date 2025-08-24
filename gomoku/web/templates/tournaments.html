@@ -79,18 +79,14 @@
                     </a>
                     
                     {% if tournament.status == 'running' %}
-                    <form method="POST" action="{{ url_for('cancel_tournament', tournament_id=tournament.id) }}" style="display: inline;">
-                        <button type="submit" class="btn btn-warning btn-sm" onclick="return confirm('Cancel this running tournament?')">
-                            <i class="fas fa-stop"></i> Cancel
-                        </button>
-                    </form>
+                    <button type="button" class="btn btn-warning btn-sm" onclick="showPasswordModal('cancel', {{ tournament.id }})">
+                        <i class="fas fa-stop"></i> Cancel
+                    </button>
                     {% endif %}
                     
-                    <form method="POST" action="{{ url_for('delete_tournament', tournament_id=tournament.id) }}" style="display: inline;">
-                        <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('Delete this tournament and all its games permanently?')">
-                            <i class="fas fa-trash"></i> Delete
-                        </button>
-                    </form>
+                    <button type="button" class="btn btn-danger btn-sm" onclick="showPasswordModal('delete', {{ tournament.id }})">
+                        <i class="fas fa-trash"></i> Delete
+                    </button>
                 </div>
             </div>
         </div>
@@ -201,6 +197,34 @@
 </div>
 {% endblock %}
 
+<!-- Password Modal -->
+<div class="modal fade" id="passwordModal" tabindex="-1" aria-labelledby="passwordModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="passwordModalLabel">
+                    <i class="fas fa-lock"></i> System Password Required
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="passwordForm" method="POST">
+                <div class="modal-body">
+                    <p id="passwordModalMessage">Enter the system password to perform this action:</p>
+                    <div class="mb-3">
+                        <label for="modal_tournament_password" class="form-label">Password</label>
+                        <input type="password" class="form-control" id="modal_tournament_password" 
+                               name="tournament_password" required>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn" id="confirmButton">Confirm</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
 {% block scripts %}
 {% if tournaments.items and tournaments.items|selectattr('status', 'equalto', 'running')|list %}
 <script>
@@ -210,4 +234,30 @@ setTimeout(function() {
 }, 30000);
 </script>
 {% endif %}
+
+<script>
+function showPasswordModal(action, tournamentId) {
+    const modal = new bootstrap.Modal(document.getElementById('passwordModal'));
+    const form = document.getElementById('passwordForm');
+    const confirmButton = document.getElementById('confirmButton');
+    const message = document.getElementById('passwordModalMessage');
+    
+    if (action === 'cancel') {
+        form.action = `/tournaments/${tournamentId}/cancel`;
+        confirmButton.className = 'btn btn-warning';
+        confirmButton.innerHTML = '<i class="fas fa-stop"></i> Cancel Tournament';
+        message.textContent = 'Enter the system password to cancel this tournament:';
+    } else if (action === 'delete') {
+        form.action = `/tournaments/${tournamentId}/delete`;
+        confirmButton.className = 'btn btn-danger';
+        confirmButton.innerHTML = '<i class="fas fa-trash"></i> Delete Tournament';
+        message.textContent = 'Enter the system password to delete this tournament and all its games:';
+    }
+    
+    // Clear password field
+    document.getElementById('modal_tournament_password').value = '';
+    
+    modal.show();
+}
+</script>
 {% endblock %}
