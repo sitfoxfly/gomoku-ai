@@ -8,7 +8,7 @@ from flask import Flask, request, jsonify, render_template, redirect, url_for, f
 from werkzeug.utils import secure_filename
 import threading
 
-from .models import db, Agent, Tournament, Game, TournamentJob, WorkerProcess
+from .models import db, Agent, Tournament, Game, TournamentJob, TournamentCheckpoint, WorkerProcess
 from .validator import AgentValidator
 from .tournament import TournamentRunner
 from .job_manager import JobManager
@@ -326,10 +326,17 @@ def create_app(config=None):
             tournament = Tournament.query.get_or_404(tournament_id)
             tournament_name = tournament.name
             
-            # Delete all games in this tournament first
+            # Delete all related records first (in order to avoid foreign key constraints)
+            # Delete tournament checkpoints
+            TournamentCheckpoint.query.filter_by(tournament_id=tournament_id).delete()
+            
+            # Delete tournament jobs
+            TournamentJob.query.filter_by(tournament_id=tournament_id).delete()
+            
+            # Delete all games in this tournament
             Game.query.filter_by(tournament_id=tournament_id).delete()
             
-            # Delete the tournament
+            # Finally delete the tournament itself
             db.session.delete(tournament)
             db.session.commit()
             
