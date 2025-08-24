@@ -7,6 +7,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import List, Optional, Dict, Any
 
+from openai import RateLimitError, APIError
 from ..arena.game_arena import GomokuArena
 from ..core.models import GameResult
 from ..utils.visualization import ColorBoardFormatter
@@ -134,8 +135,53 @@ class TournamentRunner:
             log_filename = f"game_{game.id}_{black_agent_db.id}_vs_{white_agent_db.id}.json"
             log_path = self.log_dir / log_filename
 
-            # Play the game
-            result = await self.arena.run_game(black_agent, white_agent, verbose=False)
+            # Play the game with retry logic for OpenAI API rate limits
+            max_retries = 3
+            retry_delay = 60  # seconds
+            result = None
+            
+            for attempt in range(max_retries + 1):
+                try:
+                    result = await self.arena.run_game(black_agent, white_agent, verbose=False)
+                    break  # Success, exit retry loop
+                    
+                except (RateLimitError, APIError) as e:
+                    # Check if this is a retryable rate limit error using structured data
+                    is_retryable = False
+                    
+                    if isinstance(e, RateLimitError):
+                        # Always retry rate limit errors
+                        is_retryable = True
+                    elif isinstance(e, APIError):
+                        # Check for specific error codes using structured response
+                        try:
+                            if hasattr(e, 'status_code') and e.status_code == 429:
+                                is_retryable = True
+                            elif hasattr(e, 'response') and e.response:
+                                # Try to parse response for error details
+                                if hasattr(e.response, 'json'):
+                                    error_data = e.response.json()
+                                    error_code = error_data.get('error', {}).get('code')
+                                    if error_code == 'model_switching_limit_exceeded':
+                                        is_retryable = True
+                        except Exception:
+                            # If we can't parse the structured response, fall back to RateLimitError check
+                            pass
+                    
+                    if is_retryable and attempt < max_retries:
+                        error_type = type(e).__name__
+                        print(f"OpenAI {error_type} in game {game.id} (attempt {attempt + 1}/{max_retries + 1}): {e}")
+                        print(f"Retrying in {retry_delay} seconds...")
+                        await asyncio.sleep(retry_delay)
+                        continue
+                    else:
+                        # Max retries exceeded or non-retryable API error
+                        if attempt == max_retries and is_retryable:
+                            print(f"Max retries ({max_retries}) exceeded for OpenAI API error in game {game.id}")
+                        raise e  # Re-raise to be handled by outer exception handler
+            
+            if result is None:
+                raise Exception("Failed to get game result after retries")
 
             # Update game record
             game.completed_at = datetime.utcnow()

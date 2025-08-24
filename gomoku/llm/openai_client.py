@@ -27,7 +27,7 @@ class OpenAIGomokuClient(LLMClient):
         top_p: float = 1.0,
         frequency_penalty: float = 0.0,
         presence_penalty: float = 0.0,
-        timeout: int = 30,
+        timeout: int = None,
         **kwargs,
     ):
         """
@@ -69,17 +69,23 @@ class OpenAIGomokuClient(LLMClient):
     )
     async def _make_api_call(self, openai_messages: List[Dict[str, str]]) -> str:
         """Make the actual API call with retry logic for rate limits."""
-        response = await self.client.chat.completions.create(
-            model=self.model,
-            messages=openai_messages,
-            temperature=self.temperature,
-            max_tokens=self.max_tokens,
-            top_p=self.top_p,
-            frequency_penalty=self.frequency_penalty,
-            presence_penalty=self.presence_penalty,
-            timeout=self.timeout,
+        # Build API call parameters
+        api_params = {
+            "model": self.model,
+            "messages": openai_messages,
+            "temperature": self.temperature,
+            "max_tokens": self.max_tokens,
+            "top_p": self.top_p,
+            "frequency_penalty": self.frequency_penalty,
+            "presence_penalty": self.presence_penalty,
             **self.extra_kwargs,
-        )
+        }
+        
+        # Only add timeout if explicitly set
+        if self.timeout is not None:
+            api_params["timeout"] = self.timeout
+            
+        response = await self.client.chat.completions.create(**api_params)
         return response.choices[0].message.content
 
     async def complete(self, messages: Union[str, List[Dict[str, str]]]) -> str:
