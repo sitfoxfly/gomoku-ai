@@ -4,14 +4,37 @@ import os
 from typing import Union, List, Dict
 from openai import AsyncOpenAI
 from openai import RateLimitError
-from tenacity import retry, stop_after_attempt, wait_exponential, before_sleep_log, retry_if_exception_type
+from tenacity import retry, stop_after_attempt, wait_exponential, before_sleep_log
 import logging
 from .interfaces import LLMClient
 
 
 def _is_rate_limit_error(exception: Exception) -> bool:
-    """Check if exception is a 429 rate limit error."""
-    return isinstance(exception, RateLimitError)
+    """Check if exception is a retryable rate limit error."""
+    from openai import APIError
+
+    is_retryable = False
+
+    if isinstance(exception, RateLimitError):
+        # Always retry rate limit errors
+        is_retryable = True
+    elif isinstance(exception, APIError):
+        # Check for specific error codes using structured response
+        try:
+            if hasattr(exception, 'status_code') and exception.status_code == 429:
+                is_retryable = True
+            elif hasattr(exception, 'response') and exception.response:
+                # Try to parse response for error details
+                if hasattr(exception.response, 'json'):
+                    error_data = exception.response.json()
+                    error_code = error_data.get('error', {}).get('code')
+                    if error_code == 'model_switching_limit_exceeded':
+                        is_retryable = True
+        except Exception:
+            # If we can't parse the structured response, fall back to RateLimitError check
+            pass
+
+    return is_retryable
 
 
 class OpenAIGomokuClient(LLMClient):
@@ -63,7 +86,7 @@ class OpenAIGomokuClient(LLMClient):
     @retry(
         stop=stop_after_attempt(3),
         wait=wait_exponential(multiplier=1.5, min=1, max=10),
-        retry=retry_if_exception_type((RateLimitError,)),
+        retry=_is_rate_limit_error,
         before_sleep=before_sleep_log(logging.getLogger(__name__), logging.INFO),
         reraise=True,
     )
@@ -80,11 +103,11 @@ class OpenAIGomokuClient(LLMClient):
             "presence_penalty": self.presence_penalty,
             **self.extra_kwargs,
         }
-        
+
         # Only add timeout if explicitly set
         if self.timeout is not None:
             api_params["timeout"] = self.timeout
-            
+
         response = await self.client.chat.completions.create(**api_params)
         return response.choices[0].message.content
 

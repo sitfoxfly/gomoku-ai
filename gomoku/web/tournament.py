@@ -30,11 +30,7 @@ class TournamentRunner:
         timeout = float(os.environ.get('GOMOKU_MOVE_TIMEOUT', '30.0'))
 
         # Create arena with color formatter for better visualization
-        self.arena = GomokuArena(
-            board_size=board_size,
-            time_limit=timeout,
-            formatter=ColorBoardFormatter(board_size)
-        )
+        self.arena = GomokuArena(board_size=board_size, time_limit=timeout, formatter=ColorBoardFormatter(board_size))
 
     async def run_tournament(self, tournament_id: int) -> bool:
         """Run a complete tournament between all valid agents."""
@@ -47,7 +43,7 @@ class TournamentRunner:
         # Get selected agents or all valid agents if none selected
         selected_agent_ids = tournament.get_selected_agent_ids()
         if selected_agent_ids:
-            agents = Agent.query.filter(Agent.id.in_(selected_agent_ids), Agent.is_valid==True).all()
+            agents = Agent.query.filter(Agent.id.in_(selected_agent_ids), Agent.is_valid == True).all()
             print(f"Found {len(agents)} selected agents for tournament {tournament_id}")
         else:
             agents = Agent.query.filter_by(is_valid=True).all()
@@ -110,12 +106,7 @@ class TournamentRunner:
             return None
 
         # Create game record
-        game = Game(
-            tournament_id=tournament_id,
-            black_agent_id=black_agent_id,
-            white_agent_id=white_agent_id,
-            started_at=datetime.utcnow()
-        )
+        game = Game(tournament_id=tournament_id, black_agent_id=black_agent_id, white_agent_id=white_agent_id, started_at=datetime.utcnow())
         db.session.add(game)
         db.session.commit()
 
@@ -139,16 +130,16 @@ class TournamentRunner:
             max_retries = 3
             retry_delay = 60  # seconds
             result = None
-            
+
             for attempt in range(max_retries + 1):
                 try:
                     result = await self.arena.run_game(black_agent, white_agent, verbose=False)
                     break  # Success, exit retry loop
-                    
+
                 except (RateLimitError, APIError) as e:
                     # Check if this is a retryable rate limit error using structured data
                     is_retryable = False
-                    
+
                     if isinstance(e, RateLimitError):
                         # Always retry rate limit errors
                         is_retryable = True
@@ -167,7 +158,7 @@ class TournamentRunner:
                         except Exception:
                             # If we can't parse the structured response, fall back to RateLimitError check
                             pass
-                    
+
                     if is_retryable and attempt < max_retries:
                         error_type = type(e).__name__
                         print(f"OpenAI {error_type} in game {game.id} (attempt {attempt + 1}/{max_retries + 1}): {e}")
@@ -179,7 +170,24 @@ class TournamentRunner:
                         if attempt == max_retries and is_retryable:
                             print(f"Max retries ({max_retries}) exceeded for OpenAI API error in game {game.id}")
                         raise e  # Re-raise to be handled by outer exception handler
-            
+
+                except Exception as e:
+                    # Handle any other exception types by checking string content
+                    is_retryable = False
+                    error_str = str(e).lower()
+                    if 'model_switching_limit_exceeded' in error_str:
+                        is_retryable = True
+
+                    if is_retryable and attempt < max_retries:
+                        error_type = type(e).__name__
+                        print(f"Generic {error_type} with model switching limit in game {game.id} (attempt {attempt + 1}/{max_retries + 1}): {e}")
+                        print(f"Retrying in {retry_delay} seconds...")
+                        await asyncio.sleep(retry_delay)
+                        continue
+                    else:
+                        # Not retryable or max retries exceeded
+                        raise e
+
             if result is None:
                 raise Exception("Failed to get game result after retries")
 
@@ -194,9 +202,9 @@ class TournamentRunner:
                     'agent2': white_agent_db.name,
                     'board_size': self.board_size,
                     'timestamp': datetime.utcnow().isoformat() + 'Z',
-                    'game_id': game.id
+                    'game_id': game.id,
                 },
-                'game_result': result
+                'game_result': result,
             }
 
             # Save game log to JSON file
@@ -403,7 +411,7 @@ class TournamentRunner:
                 white_original_rating = agent_ratings[white_agent.id]
 
                 # Expected scores based on original ratings
-                expected_black = 1 / (1 + 10**((white_original_rating - black_original_rating) / 400))
+                expected_black = 1 / (1 + 10 ** ((white_original_rating - black_original_rating) / 400))
                 expected_white = 1 - expected_black
 
                 # Actual scores
@@ -440,21 +448,12 @@ class TournamentRunner:
 
     def get_leaderboard(self, limit: int = 50) -> List[Dict[str, Any]]:
         """Get current leaderboard ordered by ELO rating."""
-        agents = (Agent.query
-                 .filter_by(is_valid=True)
-                 .filter(Agent.games_played > 0)
-                 .order_by(Agent.elo_rating.desc())
-                 .limit(limit)
-                 .all())
+        agents = Agent.query.filter_by(is_valid=True).filter(Agent.games_played > 0).order_by(Agent.elo_rating.desc()).limit(limit).all()
 
         return [agent.to_dict() for agent in agents]
 
     def get_recent_games(self, limit: int = 20) -> List[Dict[str, Any]]:
         """Get most recent completed games."""
-        games = (Game.query
-                .filter(Game.completed_at.isnot(None))
-                .order_by(Game.completed_at.desc())
-                .limit(limit)
-                .all())
+        games = Game.query.filter(Game.completed_at.isnot(None)).order_by(Game.completed_at.desc()).limit(limit).all()
 
         return [game.to_dict() for game in games]
