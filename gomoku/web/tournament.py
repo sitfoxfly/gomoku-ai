@@ -80,6 +80,7 @@ class TournamentRunner:
 
                     try:
                         print(f"Playing game: {agent1.name} vs {agent2.name}")
+                        await asyncio.sleep(2.0)
                         await self._play_game(tournament_id, agent1.id, agent2.id)
                         tournament.completed_games += 1
                         print(f"Game completed. Progress: {tournament.completed_games}/{tournament.total_games}")
@@ -175,7 +176,7 @@ class TournamentRunner:
                     # Handle any other exception types by checking string content
                     is_retryable = False
                     error_str = str(e).lower()
-                    if 'model_switching_limit_exceeded' in error_str:
+                    if 'model_switching_limit_exceeded' in error_str or 'concurrency_limit_exceeded' in error_str:
                         is_retryable = True
 
                     if is_retryable and attempt < max_retries:
