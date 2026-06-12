@@ -45,7 +45,7 @@
                     <tr data-rank="{{ loop.index }}" 
                         data-name="{{ agent.name }}" 
                         data-author="{{ agent.author }}" 
-                        data-elo="{{ agent.elo_rating }}" 
+                        data-elo="{{ agent.elo_display }}" 
                         data-games="{{ agent.games_played }}" 
                         data-winrate="{{ agent.win_rate if agent.games_played > 0 else -1 }}" 
                         data-date="{% if agent.uploaded_at %}{% if agent.uploaded_at.strftime is defined %}{{ agent.uploaded_at.strftime('%Y-%m-%d') }}{% else %}{{ agent.uploaded_at[:10] if agent.uploaded_at|length >= 10 else agent.uploaded_at }}{% endif %}{% else %}1900-01-01{% endif %}">
@@ -73,7 +73,7 @@
                         </td>
                         <td>{{ agent.author }}</td>
                         <td>
-                            <span class="badge bg-primary">{{ agent.elo_rating }}</span>
+                            <span class="badge bg-primary">{{ agent.elo_display }}</span>
                         </td>
                         <td>{{ agent.games_played }}</td>
                         <td>

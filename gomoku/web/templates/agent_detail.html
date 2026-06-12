@@ -27,7 +27,7 @@
                         <p><strong>Games Played:</strong> {{ agent.games_played }}</p>
                         <p><strong>Games Won:</strong> {{ agent.games_won }}</p>
                         <p><strong>Win Rate:</strong> <span class="win-rate">{{ "%.1f"|format(agent.win_rate) }}%</span></p>
-                        <p><strong>ELO Rating:</strong> <span class="badge bg-primary">{{ agent.elo_rating }}</span></p>
+                        <p><strong>ELO Rating:</strong> <span class="badge bg-primary">{{ agent.elo_display }}</span></p>
                     </div>
                 </div>
                 
@@ -159,7 +159,7 @@
                     </div>
                     
                     <div class="text-center">
-                        <h4 class="text-primary">{{ agent.elo_rating }}</h4>
+                        <h4 class="text-primary">{{ agent.elo_display }}</h4>
                         <small class="text-muted">ELO Rating</small>
                     </div>
                 {% else %}

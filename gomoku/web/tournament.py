@@ -433,12 +433,13 @@ class TournamentRunner:
                 rating_changes[black_agent.id] += K * (actual_black - expected_black)
                 rating_changes[white_agent.id] += K * (actual_white - expected_white)
 
-        # Apply all rating changes at once. elo_rating is an integer column, so
-        # round rather than letting the float silently truncate/drift.
+        # Apply all rating changes at once. elo_rating is a float column, so the
+        # fractional deltas are preserved (display rounding happens via
+        # Agent.elo_display).
         for agent_id, change in rating_changes.items():
             agent = Agent.query.get(agent_id)
             if agent:
-                agent.elo_rating = round(agent.elo_rating + change)
+                agent.elo_rating += change
 
         db.session.commit()
 

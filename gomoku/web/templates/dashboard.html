@@ -114,7 +114,7 @@
                     <div>
                         <h6 class="mb-1">{{ agent.name }}</h6>
                         <small class="text-muted">by {{ agent.author }}</small>
-                        <div class="elo-rating">ELO: {{ agent.elo_rating }}</div>
+                        <div class="elo-rating">ELO: {{ agent.elo_display }}</div>
                     </div>
                     <div class="text-end">
                         <span class="badge bg-success">{{ "%.1f"|format(agent.win_rate) }}% wins</span>

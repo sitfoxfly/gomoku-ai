@@ -26,13 +26,21 @@ class Agent(db.Model):
     games_played = db.Column(db.Integer, default=0)
     games_won = db.Column(db.Integer, default=0)
     games_drawn = db.Column(db.Integer, default=0)
-    elo_rating = db.Column(db.Integer, default=1500)
-    
+    # Stored as float so fractional ELO deltas accumulate without rounding
+    # drift (the rating feeds back into future expected-score calculations).
+    # Use `elo_display` for whole-number presentation.
+    elo_rating = db.Column(db.Float, default=1500.0)
+
     @property
     def win_rate(self) -> float:
         if self.games_played == 0:
             return 0.0
         return (self.games_won / self.games_played) * 100
+
+    @property
+    def elo_display(self) -> int:
+        """Whole-number ELO for display (full precision is kept internally)."""
+        return round(self.elo_rating)
     
     @property
     def games_lost(self) -> int:
@@ -52,7 +60,7 @@ class Agent(db.Model):
             'games_drawn': self.games_drawn,
             'games_lost': self.games_lost,
             'win_rate': self.win_rate,
-            'elo_rating': self.elo_rating
+            'elo_rating': self.elo_display
         }
 
 
