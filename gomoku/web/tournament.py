@@ -294,8 +294,10 @@ class TournamentRunner:
                 game.result = 'error'
                 game.error_message = result.get('reason', 'Unknown error')
 
-            # Update game counts (only increment for completed games, not errors)
-            if game_result in [GameResult.BLACK_WIN, GameResult.WHITE_WIN, GameResult.DRAW, GameResult.TIMEOUT, GameResult.INVALID_MOVE]:
+            # Update game counts (only increment for games that were actually
+            # classified, not errors — including timeout/invalid-move cases where
+            # we could not determine which agent was at fault).
+            if game.result != 'error':
                 black_agent_db.games_played += 1
                 white_agent_db.games_played += 1
 
@@ -387,9 +389,13 @@ class TournamentRunner:
         agent_ratings = {}
         rating_changes = {}
 
+        # Results that affect ratings: decisive games and draws (a draw scores
+        # 0.5 each under standard ELO).
+        rated_results = ['black_wins', 'white_wins', 'draw']
+
         # Get all agents and their ratings at tournament start
         for game in games:
-            if game.result in ['black_wins', 'white_wins']:
+            if game.result in rated_results:
                 black_agent = game.black_agent
                 white_agent = game.white_agent
 
@@ -403,7 +409,7 @@ class TournamentRunner:
 
         # Calculate rating changes using original ratings
         for game in games:
-            if game.result in ['black_wins', 'white_wins']:
+            if game.result in rated_results:
                 black_agent = game.black_agent
                 white_agent = game.white_agent
 
@@ -415,19 +421,24 @@ class TournamentRunner:
                 expected_black = 1 / (1 + 10 ** ((white_original_rating - black_original_rating) / 400))
                 expected_white = 1 - expected_black
 
-                # Actual scores
-                actual_black = 1 if game.result == 'black_wins' else 0
-                actual_white = 1 if game.result == 'white_wins' else 0
+                # Actual scores: win=1, draw=0.5, loss=0
+                if game.result == 'black_wins':
+                    actual_black, actual_white = 1.0, 0.0
+                elif game.result == 'white_wins':
+                    actual_black, actual_white = 0.0, 1.0
+                else:  # draw
+                    actual_black, actual_white = 0.5, 0.5
 
                 # Accumulate rating changes
                 rating_changes[black_agent.id] += K * (actual_black - expected_black)
                 rating_changes[white_agent.id] += K * (actual_white - expected_white)
 
-        # Apply all rating changes at once
+        # Apply all rating changes at once. elo_rating is an integer column, so
+        # round rather than letting the float silently truncate/drift.
         for agent_id, change in rating_changes.items():
             agent = Agent.query.get(agent_id)
             if agent:
-                agent.elo_rating += change
+                agent.elo_rating = round(agent.elo_rating + change)
 
         db.session.commit()
 

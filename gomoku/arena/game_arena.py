@@ -117,14 +117,19 @@ class GomokuArena:
                             "llm_conversations": []
                         }
                     )
+                    winner = Player.WHITE if current_agent == agent1 else Player.BLACK
                     return {
-                        "winner": Player.WHITE if current_agent == agent1 else Player.BLACK,
-                        "result": GameResult.BLACK_WIN if current_agent == agent2 else GameResult.WHITE_WIN,
+                        "winner": agents[winner].agent_id,
+                        "loser": current_agent.agent_id,
+                        "result": GameResult.INVALID_MOVE.value,
+                        "result_code": GameResult.INVALID_MOVE.get_code(),
+                        "reason": f"Invalid move format by {current_agent.agent_id}: {e}",
                         "moves": len(game.state.move_history),
-                        "board": game.state.board,
-                        "winning_sequence": [],
                         "game_log": game_log,
-                        "error": f"Agent {current_agent.agent_id} returned invalid move format: {e}"
+                        "final_board": game.state.board,
+                        "move_history": self.move_history_to_string(game.state.move_history),
+                        "winning_sequence": [],
+                        "error": f"Agent {current_agent.agent_id} returned invalid move format: {e}",
                     }
 
                 # Make move

@@ -5,6 +5,8 @@ import json
 from pathlib import Path
 from typing import Dict, Optional, Tuple, Any
 
+from werkzeug.utils import secure_filename
+
 from ..agents.base import Agent
 from ..core.models import Player, GameState
 
@@ -357,8 +359,16 @@ class AgentValidator:
             import uuid
             import hashlib
             agent_id = str(uuid.uuid4())[:8]
-            agent_name = metadata.get('name', 'unknown').replace(' ', '_').lower()
+            # Sanitize the user-supplied name to prevent path traversal
+            # (e.g. a name like "../../etc/evil" must not escape upload_dir).
+            agent_name = secure_filename(metadata.get('name', 'unknown')).lower() or 'agent'
             agent_dir = self.upload_dir / f"{agent_name}_{agent_id}"
+
+            # Defense-in-depth: ensure the resolved path stays under upload_dir.
+            upload_root = self.upload_dir.resolve()
+            if not str(agent_dir.resolve()).startswith(str(upload_root)):
+                return False, "Invalid agent name"
+
             agent_dir.mkdir(exist_ok=True)
 
             # Generate hash-based filename for the Python file
